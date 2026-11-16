@@ -1,0 +1,98 @@
+import { Badge, Kpi, Page, Panel } from "@/components/ui";
+import { authorize } from "@/lib/authz";
+import { currentPrincipal } from "@/lib/identity";
+// fetch is global in Node 22+
+
+export const dynamic = "force-dynamic";
+
+async function getStatus() {
+  // Call our own status endpoint server-side.
+  const base = process.env.HLIFT_BASE_URL ?? "http://127.0.0.1:3000";
+  try {
+    const res = await fetch(`${base}/api/integrations/status`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export default async function IntegrationsPage() {
+  const principal = await currentPrincipal();
+  const decision = authorize({ principal, action: "SECURITY_CONFIGURATION_MANAGE" }, { record: false });
+  if (!decision.permitted) {
+    const { default: AccessDenied } = await import("@/components/AccessDenied");
+    return (
+      <AccessDenied
+        title="Integrations"
+        plane="CYBERSECURITY"
+        capability="security.configuration.manage"
+        principal={principal}
+        decision={decision}
+      />
+    );
+  }
+
+  const status = await getStatus();
+
+  return (
+    <Page
+      title="Integrations"
+      subtitle="Connect H-LIFT to Jira and Bitbucket so engineering issues and pull requests feed the traceability chain. Configuration is environment-driven; no secret is stored in the repository."
+    >
+      <div className="grid kpis" style={{ marginBottom: 18 }}>
+        <Kpi
+          label="Jira"
+          value={status?.jira?.configured ? "CONFIGURED" : "NOT CONFIGURED"}
+          severity={status?.jira?.configured ? "ok" : "warn"}
+          note={status?.jira?.project ?? "set JIRA_* env vars"}
+        />
+        <Kpi
+          label="Bitbucket"
+          value={status?.bitbucket?.configured ? "CONFIGURED" : "NOT CONFIGURED"}
+          severity={status?.bitbucket?.configured ? "ok" : "warn"}
+          note={status?.bitbucket?.repo ?? "set BITBUCKET_* env vars"}
+        />
+      </div>
+
+      <Panel title="Jira">
+        <p className="small dim" style={{ marginBottom: 12 }}>
+          Syncs Jira issues into the engineering issue register. Requires
+          <span className="mono"> JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY</span>.
+          Webhook: <span className="mono">POST /api/webhooks/jira</span> (optional
+          <span className="mono"> JIRA_WEBHOOK_SECRET</span>).
+        </p>
+        <form action="/api/integrations/jira/sync" method="POST">
+          <button className="small" type="submit">Sync Jira issues</button>
+        </form>
+      </Panel>
+
+      <Panel title="Bitbucket">
+        <p className="small dim" style={{ marginBottom: 12 }}>
+          Syncs pull requests into code links, matching issue keys found in branch names. Requires
+          <span className="mono"> BITBUCKET_WORKSPACE, BITBUCKET_REPO_SLUG, BITBUCKET_USERNAME, BITBUCKET_APP_PASSWORD</span>.
+          Webhook: <span className="mono">POST /api/webhooks/bitbucket</span> (optional
+          <span className="mono"> BITBUCKET_WEBHOOK_SECRET</span>).
+        </p>
+        <form action="/api/integrations/bitbucket/sync" method="POST">
+          <button className="small" type="submit">Sync Bitbucket PRs</button>
+        </form>
+      </Panel>
+
+      <Panel title="Environment reference">
+        <table>
+          <tbody>
+            <tr><td className="mono small">JIRA_BASE_URL</td><td className="small dim">e.g. https://yourco.atlassian.net</td></tr>
+            <tr><td className="mono small">JIRA_EMAIL</td><td className="small dim">account email for the API token</td></tr>
+            <tr><td className="mono small">JIRA_API_TOKEN</td><td className="small dim">Atlassian API token</td></tr>
+            <tr><td className="mono small">JIRA_PROJECT_KEY</td><td className="small dim">e.g. HL</td></tr>
+            <tr><td className="mono small">BITBUCKET_WORKSPACE</td><td className="small dim">workspace slug</td></tr>
+            <tr><td className="mono small">BITBUCKET_REPO_SLUG</td><td className="small dim">repository slug</td></tr>
+            <tr><td className="mono small">BITBUCKET_USERNAME</td><td className="small dim">Bitbucket username</td></tr>
+            <tr><td className="mono small">BITBUCKET_APP_PASSWORD</td><td className="small dim">app password with repo read</td></tr>
+          </tbody>
+        </table>
+      </Panel>
+    </Page>
+  );
+}

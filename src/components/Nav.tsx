@@ -96,7 +96,10 @@ export default function Nav({ counts, itAdmin = false }: { counts: NavCounts; it
   const itGroup = itAdmin
     ? {
         label: "IT administration",
-        items: [{ href: "/it", label: "IT console" }],
+        items: [
+          { href: "/it", label: "IT console" },
+          { href: "/integrations", label: "Integrations" },
+        ],
       }
     : null;
 

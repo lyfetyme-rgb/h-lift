@@ -1,0 +1,55 @@
+import { fail, ok, readJson } from "@/lib/http";
+import { all, one, run } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+const STATUS_MAP: Record<string, string> = {
+  "to do": "todo", open: "todo", "in progress": "in_progress", "in review": "in_review",
+  done: "done", closed: "done", resolved: "done", canceled: "canceled", cancelled: "canceled",
+};
+
+const PRIORITY_MAP: Record<string, string> = {
+  highest: "urgent", high: "high", medium: "normal", low: "low", lowest: "low",
+};
+
+export async function POST(request: Request) {
+  // Optional shared secret check.
+  const secret = process.env.JIRA_WEBHOOK_SECRET?.trim();
+  if (secret) {
+    const provided = request.headers.get("x-hlift-webhook-secret");
+    if (provided !== secret) return fail("Invalid webhook secret.", 401);
+  }
+
+  try {
+    const body = (await readJson(request)) as any;
+    const issue = body?.issue;
+    if (!issue?.key) return fail("No issue in payload.", 400);
+
+    const f = issue.fields ?? {};
+    const key = issue.key;
+    const summary = f.summary ?? "Untitled";
+    const status = STATUS_MAP[String(f.status?.name ?? "").toLowerCase()] ?? "UNKNOWN";
+    const priority = PRIORITY_MAP[String(f.priority?.name ?? "").toLowerCase()] ?? "normal";
+    const assignee = f.assignee?.displayName ?? f.assignee?.emailAddress ?? null;
+    const created = f.created ?? new Date().toISOString();
+    const updated = f.updated ?? new Date().toISOString();
+    const url = `${process.env.JIRA_BASE_URL?.replace(/\/$/, "") ?? ""}/browse/${key}`;
+
+    const existing = one<{ id: string }>("SELECT id FROM engineering_issues WHERE key = ?", key);
+    if (existing) {
+      run(
+        `UPDATE engineering_issues SET title=?, status=?, priority=?, assignee=?, linear_url=? WHERE key=?`,
+        summary, status, priority, assignee, url, key
+      );
+    } else {
+      run(
+        `INSERT INTO engineering_issues (id, key, title, status, priority, assignee, linear_url, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `jira-${key}`, key, summary, status, priority, assignee, url, created
+      );
+    }
+    return ok({ received: true, key, event: body?.webhookEvent ?? "unknown" });
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : "Invalid payload.", 400);
+  }
+}
