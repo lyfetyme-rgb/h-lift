@@ -1,0 +1,38 @@
+# H-LIFT — never commit these
+# -----------------------------
+
+# Local database and runtime state (contains operational data)
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Environment / secrets (H-LIFT stores no credentials; keep it that way)
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+.next/
+out/
+node_modules/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker
+docker-compose.override.yml
+
+# Never commit exported evidence or audit dumps that may contain PHI/PII
+*.dump
+*.bak

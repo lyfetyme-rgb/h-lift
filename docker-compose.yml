@@ -1,0 +1,29 @@
+services:
+  h-lift:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: h-lift:trl8
+    container_name: h-lift
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - HLIFT_DB_PATH=/app/data/hlift.db
+      # Set SEED_DEMO=1 to load the demonstration dataset on first start.
+      - SEED_DEMO=1
+    volumes:
+      - hlift-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  hlift-data:
+    driver: local
