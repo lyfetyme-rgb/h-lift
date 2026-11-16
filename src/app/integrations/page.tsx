@@ -1,4 +1,5 @@
 import { Badge, Kpi, Page, Panel } from "@/components/ui";
+import { IntegrationSync } from "@/components/Actions";
 import { authorize } from "@/lib/authz";
 import { currentPrincipal } from "@/lib/identity";
 // fetch is global in Node 22+
@@ -62,9 +63,7 @@ export default async function IntegrationsPage() {
           Webhook: <span className="mono">POST /api/webhooks/jira</span> (optional
           <span className="mono"> JIRA_WEBHOOK_SECRET</span>).
         </p>
-        <form action="/api/integrations/jira/sync" method="POST">
-          <button className="small" type="submit">Sync Jira issues</button>
-        </form>
+        <IntegrationSync kind="jira" label="Sync Jira issues" />
       </Panel>
 
       <Panel title="Bitbucket">
@@ -74,9 +73,7 @@ export default async function IntegrationsPage() {
           Webhook: <span className="mono">POST /api/webhooks/bitbucket</span> (optional
           <span className="mono"> BITBUCKET_WEBHOOK_SECRET</span>).
         </p>
-        <form action="/api/integrations/bitbucket/sync" method="POST">
-          <button className="small" type="submit">Sync Bitbucket PRs</button>
-        </form>
+        <IntegrationSync kind="bitbucket" label="Sync Bitbucket PRs" />
       </Panel>
 
       <Panel title="Environment reference">

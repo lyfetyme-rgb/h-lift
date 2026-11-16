@@ -48,6 +48,7 @@ const groups: { label: string; items: NavItem[] }[] = [
       { href: "/hazmat/containers", label: "Containers" },
       { href: "/hazmat/issues", label: "Issue & transactions" },
       { href: "/hazmat/returns", label: "Returns & inspections", count: "returns" },
+      { href: "/hazmat/transfers", label: "Pack-out & transfers" },
       { href: "/hazmat/lifecycle", label: "Lifecycle ledger" },
       { href: "/hazmat/quarterly", label: "Quarterly checks", count: "checks" },
       { href: "/hazmat/expirations", label: "Expirations" },

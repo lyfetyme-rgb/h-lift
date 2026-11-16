@@ -1,6 +1,8 @@
 import { fail, forbidden, ok } from "@/lib/http";
 import { all, one, run } from "@/lib/db";
 import { requireRequest } from "@/lib/authz";
+import { currentPrincipal } from "@/lib/identity";
+import { appendAuditEvent } from "@/lib/audit";
 import { fetchBitbucketPullRequests, bitbucketConfig } from "@/lib/integrations/bitbucket";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,8 @@ export async function POST(request: Request) {
       resource_type: "integration",
       resource_id: "bitbucket",
     });
+
+    const principal = await currentPrincipal();
 
     const cfg = bitbucketConfig();
     if (!cfg) {
@@ -55,6 +59,23 @@ export async function POST(request: Request) {
       }
       linked++;
     }
+
+    appendAuditEvent({
+      plane: "CYBERSECURITY",
+      event_type: "INTEGRATION_SYNC",
+      source: "hlift.integrations.bitbucket",
+      subject_id: principal?.subject_id ?? null,
+      resource_type: "integration",
+      resource_id: "bitbucket",
+      outcome: "OK",
+      payload: {
+        workspace: cfg.workspace,
+        repo: cfg.repoSlug,
+        fetched: prs.length,
+        linked,
+        synced_at: now,
+      },
+    });
 
     return ok({ configured: true, workspace: cfg.workspace, repo: cfg.repoSlug, fetched: prs.length, linked, synced_at: now });
   } catch (e) {

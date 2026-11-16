@@ -40,8 +40,11 @@ Useful scripts:
 | Script | Purpose |
 |---|---|
 | `npm run seed` | Create the database and seed it (idempotent schema; re-running without `--reset` adds duplicate rows, so prefer `db:reset` once seeded) |
-| `npm run db:reset` | Delete the database and seed from scratch - restores the pristine demo state |
+| `npm run db:reset` | Delete the database and seed from scratch - restores the pristine demo state. Refuses (with guidance) if the dev server holds the file open; use `reset:dev` to do the whole loop in one step |
 | `npm run db:verify` | Assert the seed is pristine: 7 materials / 23 containers, 3 pending + 1 accepted inspection, 3.400 GAL returned pail, NULL unmeasured tube, 2.000 OZ variance, no REAL quantity columns, no illegal AVAILABLE container; plus 6 migrations, 14 failed logins, 7 open vulnerabilities, 2 active incidents, 2 configuration drifts, 1 integrity mismatch, 42 controls / 29 implemented, 75 evidence objects, 6 open findings, 7 POA&M entries, 9 authorization decisions (5 denied), 31 audit events and a valid SHA-256 chain |
+| `npm run typecheck` | TypeScript check without emitting |
+| `npm run check` | Typecheck plus pristine-seed assertions (`db:verify` expects the untouched demo dataset) |
+| `npm run reset:dev` | Stop whatever listens on :3000, reseed from scratch, restart `npm run dev` detached and wait until `/api/health` reports `ok` |
 
 ---
 
@@ -323,6 +326,11 @@ All endpoints return JSON. Mutations validate server-side; decisions require a n
 | GET | `/api/blockers` | Blockers |
 | GET | `/api/evidence-gaps` | Derived gap register |
 | GET | `/api/weekly-status` | Weekly data + markdown; `?format=markdown` returns `text/markdown` |
+| GET, POST | `/api/integrations/jira/sync` | Config status / capability-gated sync of Jira issues into `engineering_issues`; appends `INTEGRATION_SYNC` to the audit bus |
+| GET, POST | `/api/integrations/bitbucket/sync` | Config status / capability-gated sync of PRs into `code_links` (issue key matched in the source branch name); appends `INTEGRATION_SYNC` |
+| GET | `/api/integrations/status` | Jira and Bitbucket configuration status (env-driven) |
+| POST | `/api/webhooks/jira` | Single-issue webhook; optional `JIRA_WEBHOOK_SECRET` via `x-hlift-webhook-secret`; appends `INTEGRATION_EVENT_INGESTED` |
+| POST | `/api/webhooks/bitbucket` | PR webhook; optional `BITBUCKET_WEBHOOK_SECRET`; appends `INTEGRATION_EVENT_INGESTED` (outcome `UNLINKED` when no issue key matches the branch) |
 
 ### Mutation rules
 
@@ -334,7 +342,7 @@ All endpoints return JSON. Mutations validate server-side; decisions require a n
 - Approvals and HITL decisions without a non-empty `approver` / `decided_by` return `422`. There is no anonymous approval path.
 - Deciding an already-decided record returns `422` rather than overwriting the decision.
 - Every operational and governance mutation passes through `requireRequest()` first. A denial returns `403` with the persisted decision (`error`, `decision.reason_code`, `decision.obligations`), so the caller can distinguish authorization from validation failure.
-- Returns, inspections, container transitions, approvals, HITL decisions, conflict resolutions, incident status changes and finding status changes all append to the hash-chained audit bus with the acting subject.
+- Returns, inspections, container transitions, approvals, HITL decisions, conflict resolutions, incident status changes, finding status changes, integration syncs and integration webhooks all append to the hash-chained audit bus with the acting subject (webhooks carry no principal, so their events have a null subject).
 - Writes require `HIGH` credential assurance; facility-scoped writes require a matching facility; issue/receive/inspect/relabel require a valid recorded expiry.
 - Self-approval is denied by `SEGREGATION_OF_DUTIES`, including when the approver names the requester's display name, email or subject.
 - Read pages authorize with `{ record: false }`; browsing does not flood the decision ledger.

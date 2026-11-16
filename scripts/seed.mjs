@@ -1,4 +1,4 @@
-// Seed H-LIFT with a realistic, deliberately imperfect dataset.
+﻿// Seed H-LIFT with a realistic, deliberately imperfect dataset.
 // Unknowns and unverified records are preserved on purpose: the platform
 // must show them rather than infer a comfortable answer.
 import { DatabaseSync } from "node:sqlite";
@@ -15,7 +15,19 @@ const reset = process.argv.includes("--reset");
 if (reset) {
   for (const suffix of ["", "-wal", "-shm"]) {
     const p = dbPath + suffix;
-    if (existsSync(p)) rmSync(p);
+    if (!existsSync(p)) continue;
+    try {
+      rmSync(p);
+    } catch (e) {
+      if (e && e.code === "EPERM") {
+        console.error(
+          `\nCannot delete ${p} â€” another process (almost always 'npm run dev') holds the SQLite file open.\n` +
+            `Run 'npm run reset:dev' instead: it stops the dev server, reseeds and restarts it.\n`
+        );
+        process.exit(1);
+      }
+      throw e;
+    }
   }
 }
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -220,9 +232,9 @@ insert("code_links", [
 insert("evidence", [
   { id: "ev-1", type: "test", name: "offline-queue-72h integration suite", status: "VERIFIED", issue_id: "iss-1", system_requirement_id: "sr-1", artifact_url: "https://ci.hlift.dev/runs/8811", collected_at: daysAgo(20), notes: "Passed 14/14, artifact retained." },
   { id: "ev-2", type: "test", name: "conflict divergence unit suite", status: "VERIFIED", issue_id: "iss-2", system_requirement_id: "sr-2", artifact_url: "https://ci.hlift.dev/runs/8830", collected_at: daysAgo(16), notes: null },
-  { id: "ev-3", type: "security", name: "dependency scan — sync-service", status: "UNVERIFIED", issue_id: "iss-1", system_requirement_id: "sr-1", artifact_url: "https://ci.hlift.dev/runs/8812", collected_at: daysAgo(20), notes: "Scanner output uploaded; triage sign-off missing." },
+  { id: "ev-3", type: "security", name: "dependency scan â€” sync-service", status: "UNVERIFIED", issue_id: "iss-1", system_requirement_id: "sr-1", artifact_url: "https://ci.hlift.dev/runs/8812", collected_at: daysAgo(20), notes: "Scanner output uploaded; triage sign-off missing." },
   { id: "ev-4", type: "policy", name: "quarantine identity policy check", status: "UNKNOWN", issue_id: "iss-9", system_requirement_id: "sr-5", artifact_url: null, collected_at: null, notes: "No policy evidence collected." },
-  { id: "ev-5", type: "test", name: "return intake e2e — 8h / 25%", status: "FAILED", issue_id: "iss-5", system_requirement_id: "sr-6", artifact_url: "https://ci.hlift.dev/runs/8902", collected_at: hoursAgo(6), notes: "Remaining fraction rounded to 0.2; expected 0.25." },
+  { id: "ev-5", type: "test", name: "return intake e2e â€” 8h / 25%", status: "FAILED", issue_id: "iss-5", system_requirement_id: "sr-6", artifact_url: "https://ci.hlift.dev/runs/8902", collected_at: hoursAgo(6), notes: "Remaining fraction rounded to 0.2; expected 0.25." },
   { id: "ev-6", type: "test", name: "release gate blocks unverified evidence", status: "VERIFIED", issue_id: "iss-8", system_requirement_id: "sr-9", artifact_url: "https://ci.hlift.dev/runs/8740", collected_at: daysAgo(25), notes: null },
   { id: "ev-7", type: "security", name: "approval-router authz test", status: "VERIFIED", issue_id: "iss-10", system_requirement_id: "sr-10", artifact_url: "https://ci.hlift.dev/runs/8702", collected_at: daysAgo(35), notes: null },
   { id: "ev-8", type: "test", name: "expiry alert 30-day boundary", status: "VERIFIED", issue_id: "iss-4", system_requirement_id: "sr-4", artifact_url: "https://ci.hlift.dev/runs/8620", collected_at: daysAgo(40), notes: null },
@@ -230,8 +242,8 @@ insert("evidence", [
 ]);
 
 insert("build_artifacts", [
-  { id: "art-1", issue_id: "iss-1", name: "hlift/sync-service", version: "1.14.0", container_image: "ghcr.io/hlift/sync-service:1.14.0", digest: "sha256:1f9c…a2", status: "built", built_at: daysAgo(20) },
-  { id: "art-2", issue_id: "iss-8", name: "hlift/release-gate", version: "2.3.1", container_image: "ghcr.io/hlift/release-gate:2.3.1", digest: "sha256:7b2d…e1", status: "built", built_at: daysAgo(25) },
+  { id: "art-1", issue_id: "iss-1", name: "hlift/sync-service", version: "1.14.0", container_image: "ghcr.io/hlift/sync-service:1.14.0", digest: "sha256:1f9câ€¦a2", status: "built", built_at: daysAgo(20) },
+  { id: "art-2", issue_id: "iss-8", name: "hlift/release-gate", version: "2.3.1", container_image: "ghcr.io/hlift/release-gate:2.3.1", digest: "sha256:7b2dâ€¦e1", status: "built", built_at: daysAgo(25) },
   { id: "art-3", issue_id: "iss-5", name: "hlift/return-intake", version: "0.9.0-rc3", container_image: null, digest: null, status: "UNKNOWN", built_at: null },
 ]);
 
@@ -346,6 +358,47 @@ insert("materials", [
     hazard: "flammable", storage: "flammable cabinet", shelfLife: 730,
     partial: 1, status: "VERIFIED",
   }),
+  // NSW-specific materials (East/West task units)
+  mkMaterial({
+    id: "mat-nsw-001", code: "MAT-NSW-BAT-001",
+    name: "Lithium primary battery, BA-5590/U high-density tactical (15 V)",
+    description: "High-density lithium battery for NVG and radios. Restricted hazmat; pack-out tracked for deploying task units.",
+    category: "battery", nsn: "6135-01-DEM-0001",
+    mfr: "Example Power Corp. (demo)", mpn: "BA-5590-HD",
+    uoi: "EA", package: "unit", basis: "COUNT", uom: "EA", nominal: "1.000",
+    hazard: "lithium metal, fire risk", storage: "lithium locker, vented", shelfLife: 1825,
+    partial: 0, status: "VERIFIED",
+  }),
+  mkMaterial({
+    id: "mat-nsw-002", code: "MAT-NSW-RES-001",
+    name: "Marine composite resin, epoxy, 1 gal kit",
+    description: "Two-part epoxy for composite hull and edgewater repair on NSW craft.",
+    category: "resin", nsn: "6850-01-DEM-0002",
+    mfr: "Example Composites (demo)", mpn: "EC-EPOXY-1",
+    uoi: "KT", package: "1 gal kit", basis: "VOLUME", uom: "GAL", nominal: "1.000",
+    hazard: "corrosive, sensitizer", storage: "hazmat cabinet, temperature controlled", shelfLife: 730,
+    partial: 1, status: "VERIFIED",
+  }),
+  mkMaterial({
+    id: "mat-nsw-003", code: "MAT-NSW-LUB-001",
+    name: "Oxygen-compatible lubricant, dive locker, 4 oz",
+    description: "Oxygen-safe lubricant for rebreather and SCUBA service; contamination control required.",
+    category: "lubricant", nsn: "9150-01-DEM-0003",
+    mfr: "Example Dive Systems (demo)", mpn: "EDS-O2-4",
+    uoi: "EA", package: "4 oz tube", basis: "MASS", uom: "OZ", nominal: "4.000",
+    hazard: "oxidizer-compatible", storage: "dive locker, oxygen-service clean", shelfLife: 1825,
+    partial: 1, status: "VERIFIED",
+  }),
+  mkMaterial({
+    id: "mat-nsw-004", code: "MAT-NSW-CLP-001",
+    name: "Weapons CLP, rifle bore cleaner, 8 oz",
+    description: "Cleaner-lubricant-protectant for NSW direct-action weapons.",
+    category: "clp", nsn: "9150-01-DEM-0004",
+    mfr: "Example Ordnance (demo)", mpn: "EO-CLP-8",
+    uoi: "EA", package: "8 oz bottle", basis: "VOLUME", uom: "OZ", nominal: "8.000",
+    hazard: "flammable", storage: "flammable cabinet", shelfLife: 1825,
+    partial: 1, status: "VERIFIED",
+  }),
 ]);
 
 const mkContainer = (c) => ({
@@ -366,7 +419,7 @@ const mkContainer = (c) => ({
   state_reason: c.reason ?? null,
   created_at: c.created ?? daysAgo(60),
   facility_id: c.facility ?? "FAC-STORE",
-  owning_command: c.command ?? "NAVSUP-DEMO",
+  owning_command: c.command ?? "logsu-2",
   label_status: c.label ?? "INTACT",
   label_version: c.labelVersion ?? "L1",
 });
@@ -411,6 +464,67 @@ containers.push(
   mkContainer({ id: "ct-adh-001", code: "CT-ADH-001", material: "mat-adh-007", lot: "L250305G", package: "cartridge", nominal: "32.000", current: "18.000", uom: "OZ", seal: "OPENED", made: "2025-03-05T00:00:00.000Z", expires: "2027-03-05T00:00:00.000Z", location: "Return hold / hazmat bay", condition: "SUSPECT", state: "DISPOSITION_REQUIRED", reason: "2.000 OZ unaccounted; contamination suspected", created: daysAgo(200) }),
 );
 
+// NSW East pack-out lot (LOGSU-2 -> deploying TUs)
+for (let i = 1; i <= 6; i++) {
+  const n = String(i).padStart(4, "0");
+  containers.push(
+    mkContainer({
+      id: `ct-nsw-bat-${n}`, code: `CT-NSW-BAT-${n}`, material: "mat-nsw-001",
+      lot: "NSW2410A", package: "unit", nominal: "1.000", current: "1.000",
+      uom: "EA", seal: "SEALED", made: "2026-04-10T00:00:00.000Z", expires: "2031-04-10T00:00:00.000Z",
+      location: "LOGSU-2 / lithium locker", condition: "SERVICEABLE", state: "AVAILABLE",
+      command: "logsu-2", facility: "FAC-STORE", created: daysAgo(40),
+    })
+  );
+}
+for (let i = 1; i <= 4; i++) {
+  const n = String(i).padStart(4, "0");
+  containers.push(
+    mkContainer({
+      id: `ct-nsw-res-${n}`, code: `CT-NSW-RES-${n}`, material: "mat-nsw-002",
+      lot: "NSW2411B", package: "kit", nominal: "1.000", current: "1.000",
+      uom: "GAL", seal: "SEALED", made: "2026-05-01T00:00:00.000Z", expires: "2028-05-01T00:00:00.000Z",
+      location: "LOGSU-2 / hazmat cabinet", condition: "SERVICEABLE", state: "AVAILABLE",
+      command: "logsu-2", facility: "FAC-STORE", created: daysAgo(35),
+    })
+  );
+}
+for (let i = 1; i <= 3; i++) {
+  const n = String(i).padStart(4, "0");
+  containers.push(
+    mkContainer({
+      id: `ct-nsw-lub-${n}`, code: `CT-NSW-LUB-${n}`, material: "mat-nsw-003",
+      lot: "NSW2412C", package: "tube", nominal: "4.000", current: "4.000",
+      uom: "OZ", seal: "SEALED", made: "2026-05-15T00:00:00.000Z", expires: "2031-05-15T00:00:00.000Z",
+      location: "LOGSU-2 / dive locker", condition: "SERVICEABLE", state: "AVAILABLE",
+      command: "logsu-2", facility: "FAC-STORE", created: daysAgo(30),
+    })
+  );
+}
+for (let i = 1; i <= 4; i++) {
+  const n = String(i).padStart(4, "0");
+  containers.push(
+    mkContainer({
+      id: `ct-nsw-clp-${n}`, code: `CT-NSW-CLP-${n}`, material: "mat-nsw-004",
+      lot: "NSW2413D", package: "bottle", nominal: "8.000", current: "8.000",
+      uom: "OZ", seal: "SEALED", made: "2026-05-20T00:00:00.000Z", expires: "2031-05-20T00:00:00.000Z",
+      location: "LOGSU-2 / flammable cabinet", condition: "SERVICEABLE", state: "AVAILABLE",
+      command: "logsu-2", facility: "FAC-STORE", created: daysAgo(25),
+    })
+  );
+}
+// One battery lot already transferred to TU-EAST-BRAVO (prior pack-out)
+containers.push(
+  mkContainer({
+    id: "ct-nsw-bat-9001", code: "CT-NSW-BAT-9001", material: "mat-nsw-001",
+    lot: "NSW2407A", package: "unit", nominal: "1.000", current: "1.000",
+    uom: "EA", seal: "SEALED", made: "2026-02-07T00:00:00.000Z", expires: "2031-02-07T00:00:00.000Z",
+    location: "TU-EAST-BRAVO / pack-out kit", condition: "SERVICEABLE", state: "ISSUED",
+    command: "tu-east-bravo", facility: "FAC-STORE", reason: "Packed out to TU-EAST-BRAVO on deployment order DEPL-2026-003",
+    created: daysAgo(45),
+  })
+);
+
 insert("containers", containers);
 
 // Label condition is part of physical accountability. A missing or illegible
@@ -444,6 +558,10 @@ insert("material_identifiers", [
   { id: "mid-6", material_id: "mat-cyl-005", kind: "NSN", value: "4220-01-DEM-0005", issuer: "DLA", verified: 1, source: "catalog-import", recorded_at: daysAgo(120), notes: null },
   { id: "mid-7", material_id: "mat-dcn-006", kind: "NSN", value: "6850-01-DEM-0006", issuer: "DLA", verified: null, source: "field-entry", recorded_at: daysAgo(45), notes: "Identifier not independently verified." },
   { id: "mid-8", material_id: "mat-adh-007", kind: "MANUFACTURER_PART", value: "EA-CA-32", issuer: "Example Adhesives", verified: 1, source: "label", recorded_at: daysAgo(200), notes: null },
+  { id: "mid-9", material_id: "mat-nsw-001", kind: "NSN", value: "6135-01-DEM-0001", issuer: "DLA", verified: 1, source: "catalog-import", recorded_at: daysAgo(60), notes: "BA-5590/U high-density tactical lithium battery." },
+  { id: "mid-10", material_id: "mat-nsw-002", kind: "NSN", value: "6850-01-DEM-0002", issuer: "DLA", verified: 1, source: "catalog-import", recorded_at: daysAgo(60), notes: "Marine composite epoxy resin kit." },
+  { id: "mid-11", material_id: "mat-nsw-003", kind: "NSN", value: "9150-01-DEM-0003", issuer: "DLA", verified: 1, source: "catalog-import", recorded_at: daysAgo(60), notes: "Oxygen-compatible dive locker lubricant." },
+  { id: "mid-12", material_id: "mat-nsw-004", kind: "NSN", value: "9150-01-DEM-0004", issuer: "DLA", verified: 1, source: "catalog-import", recorded_at: daysAgo(60), notes: "Weapons CLP." },
 ]);
 
 insert("custody_assignments", [
@@ -452,6 +570,11 @@ insert("custody_assignments", [
   { id: "cust-3", container_id: "ct-lub-0012", custodian_id: "op.j.mendez", custodian_label: "response-team", facility_id: "FAC-STORE", accepted_at: hoursAgo(32), due_at: hoursAgo(8), released_at: hoursAgo(21), status: "RELEASED", notes: "Returned 9.500 OZ." },
   { id: "cust-4", container_id: "ct-tube-018", custodian_id: "op.j.mendez", custodian_label: "field-kit-7", facility_id: "FAC-STORE", accepted_at: hoursAgo(30), due_at: daysAgo(1), released_at: hoursAgo(20), status: "RELEASED", notes: "Returned with declared, unverified quantity." },
   { id: "cust-5", container_id: "ct-lub-0011", custodian_id: "op.j.mendez", custodian_label: "response-team", facility_id: "FAC-STORE", accepted_at: hoursAgo(32), due_at: hoursAgo(9), released_at: hoursAgo(24), status: "RELEASED", notes: "Consumed in full." },
+  ...[1,2,3,4,5,6].map((i) => ({ id: `cust-bat-${i}`, container_id: `ct-nsw-bat-${String(i).padStart(4,"0")}`, custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 stores", facility_id: "FAC-STORE", accepted_at: daysAgo(40), due_at: null, released_at: null, status: "ACTIVE", notes: "Available for pack-out." })),
+  ...[1,2,3,4].map((i) => ({ id: `cust-res-${i}`, container_id: `ct-nsw-res-${String(i).padStart(4,"0")}`, custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 stores", facility_id: "FAC-STORE", accepted_at: daysAgo(35), due_at: null, released_at: null, status: "ACTIVE", notes: "Available for pack-out." })),
+  ...[1,2,3].map((i) => ({ id: `cust-lub-${i}`, container_id: `ct-nsw-lub-${String(i).padStart(4,"0")}`, custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 dive locker", facility_id: "FAC-STORE", accepted_at: daysAgo(30), due_at: null, released_at: null, status: "ACTIVE", notes: "Available for pack-out." })),
+  ...[1,2,3,4].map((i) => ({ id: `cust-clp-${i}`, container_id: `ct-nsw-clp-${String(i).padStart(4,"0")}`, custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 armory", facility_id: "FAC-STORE", accepted_at: daysAgo(25), due_at: null, released_at: null, status: "ACTIVE", notes: "Available for pack-out." })),
+  { id: "cust-bat-9001", container_id: "ct-nsw-bat-9001", custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 stores", facility_id: "FAC-STORE", accepted_at: daysAgo(60), due_at: null, released_at: daysAgo(45), status: "RELEASED", notes: "Packed out to TU-EAST-BRAVO on deployment order DEPL-2026-003." },
 ]);
 
 const mkRequest = (r) => ({
@@ -477,7 +600,7 @@ insert("issue_transactions", [
   { id: "txn-4", txn_code: "TX-2026-045-1", request_id: "req-3", container_id: "ct-hyd-0003", issued_quantity: "5.000", consumed_quantity: null, returned_quantity: null, disposed_quantity: null, measurement_basis: "VOLUME", unit_of_measure: "GAL", status: "OPEN", issued_at: hoursAgo(30), issued_to: "site-bravo", returned_at: null, notes: "Open issue; consumption not yet reported." },
   { id: "txn-5", txn_code: "TX-2026-039-1", request_id: null, container_id: "ct-tube-014", issued_quantity: "8.000", consumed_quantity: "6.000", returned_quantity: "2.000", disposed_quantity: "0.000", measurement_basis: "SERVICE_HOURS", unit_of_measure: "H", status: "CLOSED", issued_at: hoursAgo(32), issued_to: "site-alpha", returned_at: hoursAgo(24), notes: "6.000 H used; 2.000 H verified by inspector." },
   { id: "txn-6", txn_code: "TX-2026-040-1", request_id: null, container_id: "ct-tube-018", issued_quantity: "8.000", consumed_quantity: "6.000", returned_quantity: "2.000", disposed_quantity: "0.000", measurement_basis: "SERVICE_HOURS", unit_of_measure: "H", status: "UNVERIFIED", issued_at: hoursAgo(30), issued_to: "field-kit-7", returned_at: hoursAgo(20), notes: "Remaining 2.000 H declared by operator; no inspector measurement." },
-  { id: "txn-7", txn_code: "TX-2026-033-1", request_id: null, container_id: "ct-adh-001", issued_quantity: "32.000", consumed_quantity: "12.000", returned_quantity: "18.000", disposed_quantity: "0.000", measurement_basis: "VOLUME", unit_of_measure: "OZ", status: "CLOSED", issued_at: daysAgo(6), issued_to: "shop-2", returned_at: daysAgo(1), notes: "2.000 OZ unaccounted for; possible leak — variance not written off." },
+  { id: "txn-7", txn_code: "TX-2026-033-1", request_id: null, container_id: "ct-adh-001", issued_quantity: "32.000", consumed_quantity: "12.000", returned_quantity: "18.000", disposed_quantity: "0.000", measurement_basis: "VOLUME", unit_of_measure: "OZ", status: "CLOSED", issued_at: daysAgo(6), issued_to: "shop-2", returned_at: daysAgo(1), notes: "2.000 OZ unaccounted for; possible leak â€” variance not written off." },
   { id: "txn-8", txn_code: "TX-2026-021-1", request_id: null, container_id: "ct-dcn-001", issued_quantity: "5.000", consumed_quantity: "0.000", returned_quantity: "0.000", disposed_quantity: "5.000", measurement_basis: "VOLUME", unit_of_measure: "L", status: "CLOSED", issued_at: daysAgo(40), issued_to: "hazwaste", returned_at: daysAgo(20), notes: "Expired lot disposed through hazardous waste contractor." },
 ]);
 
@@ -627,7 +750,7 @@ insert("hitl_exceptions", [
 ]);
 
 insert("security_events", [
-  { id: "sec-1", code: "SEC-001", title: "Anomalous bulk export from sync API", category: "anomaly", severity: "high", status: "OPEN", source: "api-gateway", occurred_at: hoursAgo(4), notes: "3× normal volume from one token; owner unknown.", event_type: "DATA_EXPORT", outcome: "DETECTED", subject_id: "op.j.mendez", source_ip: "10.20.4.18", resource_type: "api_token", resource_id: "tok-8841", correlation_id: "corr-export-01", normalized: 1, ingested_at: hoursAgo(4), asset_id: "asset-api-gateway" },
+  { id: "sec-1", code: "SEC-001", title: "Anomalous bulk export from sync API", category: "anomaly", severity: "high", status: "OPEN", source: "api-gateway", occurred_at: hoursAgo(4), notes: "3Ã— normal volume from one token; owner unknown.", event_type: "DATA_EXPORT", outcome: "DETECTED", subject_id: "op.j.mendez", source_ip: "10.20.4.18", resource_type: "api_token", resource_id: "tok-8841", correlation_id: "corr-export-01", normalized: 1, ingested_at: hoursAgo(4), asset_id: "asset-api-gateway" },
   { id: "sec-2", code: "SEC-002", title: "Dependency CVE in image base layer", category: "vulnerability", severity: "medium", status: "TRIAGED", source: "scanner", occurred_at: daysAgo(3), notes: "No known exploit path; patch scheduled.", event_type: "VULNERABILITY_DETECTED", outcome: "OPEN", subject_id: null, source_ip: null, resource_type: "container_image", resource_id: "ghcr.io/hlift/sync-service:1.14.0", correlation_id: "corr-cve-01", normalized: 1, ingested_at: daysAgo(3), asset_id: "asset-sync-service" },
   { id: "sec-3", code: "SEC-003", title: "Approval route missing authz check", category: "auth", severity: "critical", status: "MITIGATED", source: "internal-review", occurred_at: daysAgo(12), notes: "Fixed in HL-110; regression test ev-7.", event_type: "POLICY_VIOLATION", outcome: "MITIGATED", subject_id: null, source_ip: null, resource_type: "deployment_approval", resource_id: "apr-3", correlation_id: "corr-authz-01", normalized: 1, ingested_at: daysAgo(12), asset_id: "asset-api-gateway" },
   { id: "sec-4", code: "SEC-004", title: "Unverified firmware provenance on field kit", category: "supply_chain", severity: "high", status: "UNKNOWN", source: "field-report", occurred_at: daysAgo(1), notes: "Provenance record missing; no conclusion.", event_type: "PROVENANCE_UNKNOWN", outcome: "UNKNOWN", subject_id: "op.j.mendez", source_ip: null, resource_type: "endpoint", resource_id: "field-kit-7", correlation_id: null, normalized: 1, ingested_at: daysAgo(1), asset_id: "asset-field-kit-7" },
@@ -645,42 +768,37 @@ insert("blockers", [
 // ===========================================================================
 
 insert("commands", [
-  // NAVSUP enterprise root
-  { id: "cmd-navsup-hq", code: "NAVSUP-HQ", name: "Naval Supply Systems Command (HQ)", level: "HQ", parent_id: null, description: "Enterprise HAZMAT policy, oversight and audit authority.", created_at: daysAgo(400) },
-  // Type Commands (TYCOMs) - representative subset of the 7 fleet/functional TYCOMs
-  { id: "tycom-surf", code: "SURFPAC", name: "Commander, Naval Surface Force Pacific", level: "TYPE_COMMAND", parent_id: "cmd-navsup-hq", description: "Lead TYCOM for surface warships (Pacific).", created_at: daysAgo(395) },
-  { id: "tycom-air", code: "AIRPAC", name: "Commander, Naval Air Force Pacific", level: "TYPE_COMMAND", parent_id: "cmd-navsup-hq", description: "Lead TYCOM for naval aviation (Pacific).", created_at: daysAgo(395) },
-  { id: "tycom-sub", code: "SUBLANT", name: "Commander, Submarine Force Atlantic", level: "TYPE_COMMAND", parent_id: "cmd-navsup-hq", description: "Lead TYCOM for undersea forces (Atlantic).", created_at: daysAgo(395) },
-  { id: "tycom-necc", code: "NECC", name: "Navy Expeditionary Combat Command", level: "TYPE_COMMAND", parent_id: "cmd-navsup-hq", description: "Functional TYCOM for expeditionary, MESF, EOD, Seabees.", created_at: daysAgo(395) },
-  { id: "tycom-nswc", code: "NSWC", name: "Naval Special Warfare Command", level: "TYPE_COMMAND", parent_id: "cmd-navsup-hq", description: "Functional TYCOM for SEALs and SWCC.", created_at: daysAgo(395) },
-  { id: "tycom-navifor", code: "NAVIFOR", name: "Naval Information Forces", level: "TYPE_COMMAND", parent_id: "cmd-navsup-hq", description: "TYCOM for cyber, intelligence, cryptology, meteorology.", created_at: daysAgo(395) },
-  { id: "tycom-msc", code: "MSC", name: "Military Sealift Command", level: "TYPE_COMMAND", parent_id: "cmd-navsup-hq", description: "Functional TYCOM for sealift and logistics vessels.", created_at: daysAgo(395) },
-  // Shore / CNIC regional commands (representative subset of 10 regions, 71 installations)
-  { id: "cnic", code: "CNIC", name: "Commander, Navy Installations Command", level: "TYPE_COMMAND", parent_id: "cmd-navsup-hq", description: "Overarching shore TYCOM managing all Navy installations.", created_at: daysAgo(390) },
-  { id: "region-ma", code: "CNRMA", name: "Navy Region Mid-Atlantic", level: "REGION", parent_id: "cnic", description: "Atlantic/Europe/Africa regional command.", created_at: daysAgo(388) },
-  { id: "region-sw", code: "CNRSW", name: "Navy Region Southwest", level: "REGION", parent_id: "cnic", description: "Pacific regional command.", created_at: daysAgo(388) },
-  { id: "region-hi", code: "CNRH", name: "Navy Region Hawaii", level: "REGION", parent_id: "cnic", description: "Pacific regional command.", created_at: daysAgo(388) },
-  // Installations (representative; real deployment has 71)
-  { id: "inst-norfolk", code: "INST-NORFOLK", name: "Naval Station Norfolk", level: "INSTALLATION", parent_id: "region-ma", description: "Major fleet concentration; hosts dozens of tenant commands.", created_at: daysAgo(380) },
-  { id: "inst-sandiego", code: "INST-SANDIEGO", name: "Naval Base San Diego", level: "INSTALLATION", parent_id: "region-sw", description: "Major fleet concentration; hosts dozens of tenant commands.", created_at: daysAgo(380) },
-  { id: "inst-coronado", code: "INST-CORONADO", name: "Naval Amphibious Base Coronado", level: "INSTALLATION", parent_id: "region-sw", description: "Hosts NSWG and SWCC tenant commands.", created_at: daysAgo(380) },
-  { id: "inst-littlecreek", code: "INST-LITTLECREEK", name: "Joint Expeditionary Base Little Creek-Fort Story", level: "INSTALLATION", parent_id: "region-ma", description: "Hosts MESF and expeditionary tenant commands.", created_at: daysAgo(380) },
-  { id: "inst-pensacola", code: "INST-PENSACOLA", name: "NAS Pensacola", level: "INSTALLATION", parent_id: "region-ma", description: "Hosts 125+ DoD and non-DoD tenant commands.", created_at: daysAgo(380) },
-  // Tenant commands (representative; real deployment has thousands)
-  { id: "tenant-alpha", code: "TENANT-ALPHA", name: "Tenant Unit Alpha", level: "TENANT", parent_id: "inst-norfolk", description: "Operational tenant unit issuing and returning HAZMAT.", created_at: daysAgo(300) },
-  { id: "tenant-bravo", code: "TENANT-BRAVO", name: "Tenant Unit Bravo", level: "TENANT", parent_id: "inst-norfolk", description: "Operational tenant unit issuing and returning HAZMAT.", created_at: daysAgo(300) },
-  { id: "tenant-charlie", code: "TENANT-CHARLIE", name: "Tenant Unit Charlie", level: "TENANT", parent_id: "inst-sandiego", description: "Operational tenant unit issuing and returning HAZMAT.", created_at: daysAgo(300) },
-  { id: "tenant-seal", code: "SEAL-TEAM", name: "SEAL Team (NSWC)", level: "TENANT", parent_id: "inst-coronado", description: "Naval Special Warfare tenant; operationally controlled by NSWC.", created_at: daysAgo(290) },
-  { id: "tenant-mesf", code: "MESF-SQDN", name: "Maritime Expeditionary Security Squadron", level: "TENANT", parent_id: "inst-littlecreek", description: "MESF tenant; operationally controlled by NECC.", created_at: daysAgo(290) },
+  // NSW enterprise root
+  { id: "warcom", code: "WARCOM", name: "Naval Special Warfare Command", level: "HQ", parent_id: null, description: "NSW operational and administrative headquarters.", created_at: daysAgo(400) },
+  // Type Commands (East / West)
+  { id: "nswg-1", code: "NSWG-1", name: "Naval Special Warfare Group 1 (West)", level: "TYPE_COMMAND", parent_id: "warcom", description: "West Coast NSW type command; Coronado.", created_at: daysAgo(395) },
+  { id: "nswg-2", code: "NSWG-2", name: "Naval Special Warfare Group 2 (East)", level: "TYPE_COMMAND", parent_id: "warcom", description: "East Coast NSW type command; Little Creek.", created_at: daysAgo(395) },
+  // Installations / Support Units
+  { id: "logsu-1", code: "LOGSU-1", name: "Logistics Support Unit 1", level: "INSTALLATION", parent_id: "nswg-1", description: "West Coast logistics support for deploying NSW elements.", created_at: daysAgo(380) },
+  { id: "logsu-2", code: "LOGSU-2", name: "Logistics Support Unit 2", level: "INSTALLATION", parent_id: "nswg-2", description: "East Coast logistics support for deploying NSW elements.", created_at: daysAgo(380) },
+  // Tenants under LOGSU-1 (West)
+  { id: "st-1", code: "ST-1", name: "SEAL Team 1", level: "TENANT", parent_id: "logsu-1", description: "SEAL team; West.", created_at: daysAgo(300) },
+  { id: "st-3", code: "ST-3", name: "SEAL Team 3", level: "TENANT", parent_id: "logsu-1", description: "SEAL team; West.", created_at: daysAgo(300) },
+  { id: "sbt-12", code: "SBT-12", name: "Special Boat Team 12", level: "TENANT", parent_id: "logsu-1", description: "SWCC special boat team; West.", created_at: daysAgo(300) },
+  { id: "tu-west-alpha", code: "TU-WEST-ALPHA", name: "Task Unit West Alpha", level: "TENANT", parent_id: "logsu-1", description: "Deploying task unit; West.", created_at: daysAgo(290) },
+  // Tenants under LOGSU-2 (East)
+  { id: "st-2", code: "ST-2", name: "SEAL Team 2", level: "TENANT", parent_id: "logsu-2", description: "SEAL team; East.", created_at: daysAgo(300) },
+  { id: "st-4", code: "ST-4", name: "SEAL Team 4", level: "TENANT", parent_id: "logsu-2", description: "SEAL team; East.", created_at: daysAgo(300) },
+  { id: "sbt-20", code: "SBT-20", name: "Special Boat Team 20", level: "TENANT", parent_id: "logsu-2", description: "SWCC special boat team; East.", created_at: daysAgo(300) },
+  { id: "tu-east-bravo", code: "TU-EAST-BRAVO", name: "Task Unit East Bravo", level: "TENANT", parent_id: "logsu-2", description: "Deploying task unit; East.", created_at: daysAgo(290) },
+]);
+
+insert("custody_transfers", [
+  { id: "tr-0001", transfer_group: "tr-group-001", container_id: "ct-nsw-bat-9001", source_command_id: "logsu-2", destination_command_id: "tu-east-bravo", custodian_id: "cust.k.rivera", packed_at: daysAgo(45), transferred_at: daysAgo(44), due_at: daysAhead(60), deployment_order: "DEPL-2026-003", status: "TRANSFERRED", returned_unused_quantity: null, returned_unused_unit: null, reconciliation_notes: null, notes: "Packed out for East Coast deployment.", correlation_id: "corr-deploy-001", created_by: "cust.k.rivera" },
 ]);
 
 insert("principals", [
-  { id: "pr-op-mendez", subject_id: "op.j.mendez", display_name: "J. Mendez", email: "j.mendez@demo.dod.mil", command_id: "tenant-alpha", facility_id: "FAC-STORE", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "HAZMAT handler", clearance: "SECRET", cac_present: true }), created_at: daysAgo(180), last_seen_at: minutesAgo(12) },
-  { id: "pr-cust-rivera", subject_id: "cust.k.rivera", display_name: "K. Rivera", email: "k.rivera@demo.dod.mil", command_id: "tenant-alpha", facility_id: "FAC-STORE", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "HAZMAT custodian", clearance: "SECRET", cac_present: true }), created_at: daysAgo(360), last_seen_at: minutesAgo(3) },
-  { id: "pr-it-okoro", subject_id: "it.a.okoro", display_name: "A. Okoro", email: "a.okoro@demo.dod.mil", command_id: "inst-norfolk", facility_id: "FAC-STORE", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "platform administrator", clearance: "SECRET", cac_present: true }), created_at: daysAgo(300), last_seen_at: minutesAgo(45) },
-  { id: "pr-cyber-lee", subject_id: "cyber.s.lee", display_name: "S. Lee", email: "s.lee@demo.dod.mil", command_id: "inst-norfolk", facility_id: "FAC-STORE", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "cybersecurity analyst", clearance: "TOP SECRET", cac_present: true }), created_at: daysAgo(280), last_seen_at: minutesAgo(8) },
-  { id: "pr-cmd-patel", subject_id: "cmd.capt.patel", display_name: "Capt. R. Patel", email: "r.patel@demo.dod.mil", command_id: "cmd-flc", facility_id: "COMMAND-NAVSUP", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "commanding officer", clearance: "TOP SECRET", cac_present: true }), created_at: daysAgo(400), last_seen_at: hoursAgo(3) },
-  { id: "pr-aud-wright", subject_id: "aud.d.wright", display_name: "D. Wright", email: "d.wright@demo.dod.mil", command_id: "cmd-navsup-hq", facility_id: "COMMAND-NAVSUP", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "independent assessor", clearance: "SECRET", cac_present: true }), created_at: daysAgo(200), last_seen_at: hoursAgo(20) },
+  { id: "pr-op-mendez", subject_id: "op.j.mendez", display_name: "J. Mendez", email: "j.mendez@demo.dod.mil", command_id: "st-2", facility_id: "FAC-STORE", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "HAZMAT handler", clearance: "SECRET", cac_present: true }), created_at: daysAgo(180), last_seen_at: minutesAgo(12) },
+  { id: "pr-cust-rivera", subject_id: "cust.k.rivera", display_name: "K. Rivera", email: "k.rivera@demo.dod.mil", command_id: "logsu-2", facility_id: "FAC-STORE", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "HAZMAT custodian", clearance: "SECRET", cac_present: true }), created_at: daysAgo(360), last_seen_at: minutesAgo(3) },
+  { id: "pr-it-okoro", subject_id: "it.a.okoro", display_name: "A. Okoro", email: "a.okoro@demo.dod.mil", command_id: "nswg-2", facility_id: "FAC-STORE", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "platform administrator", clearance: "SECRET", cac_present: true }), created_at: daysAgo(300), last_seen_at: minutesAgo(45) },
+  { id: "pr-cyber-lee", subject_id: "cyber.s.lee", display_name: "S. Lee", email: "s.lee@demo.dod.mil", command_id: "nswg-2", facility_id: "FAC-STORE", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "cybersecurity analyst", clearance: "TOP SECRET", cac_present: true }), created_at: daysAgo(280), last_seen_at: minutesAgo(8) },
+  { id: "pr-cmd-patel", subject_id: "cmd.capt.patel", display_name: "Capt. R. Patel", email: "r.patel@demo.dod.mil", command_id: "warcom", facility_id: "COMMAND-NAVSUP", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "commanding officer", clearance: "TOP SECRET", cac_present: true }), created_at: daysAgo(400), last_seen_at: hoursAgo(3) },
+  { id: "pr-aud-wright", subject_id: "aud.d.wright", display_name: "D. Wright", email: "d.wright@demo.dod.mil", command_id: "warcom", facility_id: "COMMAND-NAVSUP", credential_assurance: "HIGH", idp_issuer: "demo.dod.idp", status: "ACTIVE", attributes: canonicalJson({ billet: "independent assessor", clearance: "SECRET", cac_present: true }), created_at: daysAgo(200), last_seen_at: hoursAgo(20) },
 ]);
 
 insert("roles", [
@@ -699,6 +817,7 @@ insert("capability_catalog", [
   { code: "material.return", name: "Return material", plane: "OPERATIONAL", description: "Receive a partial-use return into RETURN_HOLD.", is_write: 1 },
   { code: "material.inspect", name: "Inspect material", plane: "OPERATIONAL", description: "Record the eight-point return inspection and outcome.", is_write: 1 },
   { code: "material.relabel", name: "Relabel container", plane: "OPERATIONAL", description: "Reprint a container label after verification.", is_write: 1 },
+  { code: "material.transfer", name: "Transfer custody", plane: "OPERATIONAL", description: "Pack out and transfer containers to a deploying task unit.", is_write: 1 },
   { code: "inventory.read", name: "Read inventory", plane: "OPERATIONAL", description: "Read material, container and custody records.", is_write: 0 },
   { code: "inventory.adjust", name: "Adjust inventory", plane: "OPERATIONAL", description: "Record a lifecycle transition or measured adjustment.", is_write: 1 },
   { code: "inventory.reconcile", name: "Reconcile inventory", plane: "OPERATIONAL", description: "Resolve discrepancies and conflicts.", is_write: 1 },
@@ -716,17 +835,17 @@ insert("capability_catalog", [
 ]);
 
 insert("principal_roles", [
-  { id: "prr-1", principal_id: "pr-op-mendez", role_id: "role-op", command_id: "tenant-alpha", facility_id: "FAC-STORE", assigned_at: daysAgo(180), assigned_by: "cust.k.rivera", status: "ACTIVE" },
-  { id: "prr-2", principal_id: "pr-cust-rivera", role_id: "role-cust", command_id: "tenant-alpha", facility_id: "FAC-STORE", assigned_at: daysAgo(360), assigned_by: "cmd.capt.patel", status: "ACTIVE" },
-  { id: "prr-3", principal_id: "pr-it-okoro", role_id: "role-it", command_id: "inst-norfolk", facility_id: "FAC-STORE", assigned_at: daysAgo(300), assigned_by: "cmd.capt.patel", status: "ACTIVE" },
-  { id: "prr-4", principal_id: "pr-cyber-lee", role_id: "role-cyber", command_id: "inst-norfolk", facility_id: "FAC-STORE", assigned_at: daysAgo(280), assigned_by: "cmd.capt.patel", status: "ACTIVE" },
-  { id: "prr-5", principal_id: "pr-cmd-patel", role_id: "role-cmd", command_id: "cmd-flc", facility_id: "COMMAND-NAVSUP", assigned_at: daysAgo(400), assigned_by: "higher-headquarters", status: "ACTIVE" },
-  { id: "prr-6", principal_id: "pr-aud-wright", role_id: "role-aud", command_id: "cmd-navsup-hq", facility_id: "COMMAND-NAVSUP", assigned_at: daysAgo(200), assigned_by: "higher-headquarters", status: "ACTIVE" },
+  { id: "prr-1", principal_id: "pr-op-mendez", role_id: "role-op", command_id: "st-2", facility_id: "FAC-STORE", assigned_at: daysAgo(180), assigned_by: "cust.k.rivera", status: "ACTIVE" },
+  { id: "prr-2", principal_id: "pr-cust-rivera", role_id: "role-cust", command_id: "logsu-2", facility_id: "FAC-STORE", assigned_at: daysAgo(360), assigned_by: "cmd.capt.patel", status: "ACTIVE" },
+  { id: "prr-3", principal_id: "pr-it-okoro", role_id: "role-it", command_id: "nswg-2", facility_id: "FAC-STORE", assigned_at: daysAgo(300), assigned_by: "cmd.capt.patel", status: "ACTIVE" },
+  { id: "prr-4", principal_id: "pr-cyber-lee", role_id: "role-cyber", command_id: "nswg-2", facility_id: "FAC-STORE", assigned_at: daysAgo(280), assigned_by: "cmd.capt.patel", status: "ACTIVE" },
+  { id: "prr-5", principal_id: "pr-cmd-patel", role_id: "role-cmd", command_id: "warcom", facility_id: "COMMAND-NAVSUP", assigned_at: daysAgo(400), assigned_by: "higher-headquarters", status: "ACTIVE" },
+  { id: "prr-6", principal_id: "pr-aud-wright", role_id: "role-aud", command_id: "warcom", facility_id: "COMMAND-NAVSUP", assigned_at: daysAgo(200), assigned_by: "higher-headquarters", status: "ACTIVE" },
 ]);
 
 const grants = {
   "role-op": ["material.request", "material.receive", "material.return", "inventory.read"],
-  "role-cust": ["material.issue", "material.receive", "material.return", "material.inspect", "material.relabel", "inventory.read", "inventory.adjust", "inventory.reconcile", "exception.decide"],
+  "role-cust": ["material.issue", "material.receive", "material.return", "material.inspect", "material.relabel", "material.transfer", "inventory.read", "inventory.adjust", "inventory.reconcile", "exception.decide"],
   "role-it": ["security.events.read", "security.configuration.manage", "release.approve"],
   "role-cyber": ["security.events.read", "security.incident.manage", "security.configuration.manage", "security.vulnerability.manage"],
   "role-cmd": ["oversight.read", "inventory.read", "security.events.read", "assurance.controls.read", "assurance.evidence.read", "assurance.finding.close"],
@@ -749,6 +868,7 @@ const policySpec = [
   ["material.return", "HIGH", "MATCH", ["ISSUED", "IN_CUSTODY", "IN_USE", "RETURN_RECEIVED"], 0],
   ["material.inspect", "HIGH", "MATCH", ["RETURN_HOLD"], 1],
   ["material.relabel", "HIGH", "MATCH", ["RELABEL_REQUIRED"], 1],
+  ["material.transfer", "HIGH", "MATCH", null, 0],
   ["inventory.read", "LOW", "MATCH", null, 0],
   ["inventory.adjust", "HIGH", "MATCH", null, 0],
   ["inventory.reconcile", "HIGH", "MATCH", null, 0],
@@ -800,15 +920,15 @@ insert(
 // Historical authorization decisions, including denied attempts. These are
 // records, not illustrations: each also appears on the audit bus.
 const seedDecisions = [
-  { id: "authz-seed-01", decided_at: hoursAgo(4), principal_id: "pr-op-mendez", subject_id: "op.j.mendez", roles: ["HAZMAT_OPERATOR"], command_id: "NAVSUP-DEMO", facility_id: "FAC-STORE", resource_type: "container", resource_id: "ct-lub-0010", action: "MATERIAL_REQUEST", capability_code: "material.request", lifecycle_state: "AVAILABLE", credential_assurance: "HIGH", policy_id: "pol-001", permitted: 0, reason_code: "LIFECYCLE_STATE_BLOCKED", obligations: [], correlation_id: null },
-  { id: "authz-seed-02", decided_at: hoursAgo(6), principal_id: "pr-op-mendez", subject_id: "op.j.mendez", roles: ["HAZMAT_OPERATOR"], command_id: "NAVSUP-DEMO", facility_id: "FAC-STORE", resource_type: "container", resource_id: "ct-hyd-0001", action: "MATERIAL_ISSUE", capability_code: "material.issue", lifecycle_state: "AVAILABLE", credential_assurance: "HIGH", policy_id: "pol-002", permitted: 0, reason_code: "MISSING_CAPABILITY", obligations: [], correlation_id: null },
-  { id: "authz-seed-03", decided_at: hoursAgo(8), principal_id: "pr-cust-rivera", subject_id: "cust.k.rivera", roles: ["HAZMAT_CUSTODIAN"], command_id: "NAVSUP-DEMO", facility_id: "FAC-STORE", resource_type: "container", resource_id: "ct-hyd-0003", action: "MATERIAL_RETURN", capability_code: "material.return", lifecycle_state: "IN_USE", credential_assurance: "HIGH", policy_id: "pol-004", permitted: 0, reason_code: "FACILITY_SCOPE_MISMATCH", obligations: [], correlation_id: null },
-  { id: "authz-seed-04", decided_at: hoursAgo(9), principal_id: "pr-cust-rivera", subject_id: "cust.k.rivera", roles: ["HAZMAT_CUSTODIAN"], command_id: "NAVSUP-DEMO", facility_id: "FAC-STORE", resource_type: "security_asset", resource_id: "asset-api-gateway", action: "SECURITY_CONFIGURATION_MANAGE", capability_code: "security.configuration.manage", lifecycle_state: null, credential_assurance: "HIGH", policy_id: "pol-014", permitted: 0, reason_code: "MISSING_CAPABILITY", obligations: [], correlation_id: null },
-  { id: "authz-seed-05", decided_at: hoursAgo(10), principal_id: "pr-cust-rivera", subject_id: "cust.k.rivera", roles: ["HAZMAT_CUSTODIAN"], command_id: "NAVSUP-DEMO", facility_id: "FAC-STORE", resource_type: "container", resource_id: "ct-tube-014", action: "MATERIAL_INSPECT", capability_code: "material.inspect", lifecycle_state: "RETURN_HOLD", credential_assurance: "HIGH", policy_id: "pol-005", permitted: 1, reason_code: "PERMITTED", obligations: [], correlation_id: null },
-  { id: "authz-seed-06", decided_at: hoursAgo(7), principal_id: "pr-cyber-lee", subject_id: "cyber.s.lee", roles: ["CYBERSECURITY_PERSONNEL"], command_id: "NAVSUP-DEMO", facility_id: "FAC-STORE", resource_type: "security_incident", resource_id: "INC-2026-001", action: "SECURITY_INCIDENT_MANAGE", capability_code: "security.incident.manage", lifecycle_state: "OPEN", credential_assurance: "HIGH", policy_id: "pol-013", permitted: 1, reason_code: "PERMITTED", obligations: [], correlation_id: "corr-export-01" },
-  { id: "authz-seed-07", decided_at: hoursAgo(3), principal_id: "pr-cmd-patel", subject_id: "cmd.capt.patel", roles: ["COMMAND_OVERSIGHT"], command_id: "NAVSUP-DEMO", facility_id: "COMMAND-NAVSUP", resource_type: "summary", resource_id: "inventory-readiness", action: "OVERSIGHT_READ", capability_code: "oversight.read", lifecycle_state: null, credential_assurance: "HIGH", policy_id: "pol-020", permitted: 1, reason_code: "PERMITTED", obligations: [], correlation_id: null },
-  { id: "authz-seed-08", decided_at: hoursAgo(5), principal_id: "pr-aud-wright", subject_id: "aud.d.wright", roles: ["AUDITOR_ASSESSOR"], command_id: "NAVSUP-DEMO", facility_id: "COMMAND-NAVSUP", resource_type: "finding", resource_id: "FND-2026-001", action: "ASSURANCE_FINDING_CLOSE", capability_code: "assurance.finding.close", lifecycle_state: "OPEN", credential_assurance: "HIGH", policy_id: "pol-019", permitted: 0, reason_code: "MISSING_CAPABILITY", obligations: [], correlation_id: null },
-  { id: "authz-seed-09", decided_at: daysAgo(1), principal_id: "pr-it-okoro", subject_id: "it.a.okoro", roles: ["IT_ADMINISTRATOR"], command_id: "NAVSUP-DEMO", facility_id: "FAC-STORE", resource_type: "deployment_approval", resource_id: "apr-3", action: "RELEASE_APPROVE", capability_code: "release.approve", lifecycle_state: "pending", credential_assurance: "HIGH", policy_id: "pol-010", permitted: 1, reason_code: "PERMITTED", obligations: ["RECORD_APPROVAL_NOTE"], correlation_id: null },
+  { id: "authz-seed-01", decided_at: hoursAgo(4), principal_id: "pr-op-mendez", subject_id: "op.j.mendez", roles: ["HAZMAT_OPERATOR"], command_id: "st-2", facility_id: "FAC-STORE", resource_type: "container", resource_id: "ct-lub-0010", action: "MATERIAL_REQUEST", capability_code: "material.request", lifecycle_state: "AVAILABLE", credential_assurance: "HIGH", policy_id: "pol-001", permitted: 0, reason_code: "LIFECYCLE_STATE_BLOCKED", obligations: [], correlation_id: null },
+  { id: "authz-seed-02", decided_at: hoursAgo(6), principal_id: "pr-op-mendez", subject_id: "op.j.mendez", roles: ["HAZMAT_OPERATOR"], command_id: "st-2", facility_id: "FAC-STORE", resource_type: "container", resource_id: "ct-hyd-0001", action: "MATERIAL_ISSUE", capability_code: "material.issue", lifecycle_state: "AVAILABLE", credential_assurance: "HIGH", policy_id: "pol-002", permitted: 0, reason_code: "MISSING_CAPABILITY", obligations: [], correlation_id: null },
+  { id: "authz-seed-03", decided_at: hoursAgo(8), principal_id: "pr-cust-rivera", subject_id: "cust.k.rivera", roles: ["HAZMAT_CUSTODIAN"], command_id: "logsu-2", facility_id: "FAC-STORE", resource_type: "container", resource_id: "ct-hyd-0003", action: "MATERIAL_RETURN", capability_code: "material.return", lifecycle_state: "IN_USE", credential_assurance: "HIGH", policy_id: "pol-004", permitted: 0, reason_code: "FACILITY_SCOPE_MISMATCH", obligations: [], correlation_id: null },
+  { id: "authz-seed-04", decided_at: hoursAgo(9), principal_id: "pr-cust-rivera", subject_id: "cust.k.rivera", roles: ["HAZMAT_CUSTODIAN"], command_id: "logsu-2", facility_id: "FAC-STORE", resource_type: "security_asset", resource_id: "asset-api-gateway", action: "SECURITY_CONFIGURATION_MANAGE", capability_code: "security.configuration.manage", lifecycle_state: null, credential_assurance: "HIGH", policy_id: "pol-014", permitted: 0, reason_code: "MISSING_CAPABILITY", obligations: [], correlation_id: null },
+  { id: "authz-seed-05", decided_at: hoursAgo(10), principal_id: "pr-cust-rivera", subject_id: "cust.k.rivera", roles: ["HAZMAT_CUSTODIAN"], command_id: "logsu-2", facility_id: "FAC-STORE", resource_type: "container", resource_id: "ct-tube-014", action: "MATERIAL_INSPECT", capability_code: "material.inspect", lifecycle_state: "RETURN_HOLD", credential_assurance: "HIGH", policy_id: "pol-005", permitted: 1, reason_code: "PERMITTED", obligations: [], correlation_id: null },
+  { id: "authz-seed-06", decided_at: hoursAgo(7), principal_id: "pr-cyber-lee", subject_id: "cyber.s.lee", roles: ["CYBERSECURITY_PERSONNEL"], command_id: "nswg-2", facility_id: "FAC-STORE", resource_type: "security_incident", resource_id: "INC-2026-001", action: "SECURITY_INCIDENT_MANAGE", capability_code: "security.incident.manage", lifecycle_state: "OPEN", credential_assurance: "HIGH", policy_id: "pol-013", permitted: 1, reason_code: "PERMITTED", obligations: [], correlation_id: "corr-export-01" },
+  { id: "authz-seed-07", decided_at: hoursAgo(3), principal_id: "pr-cmd-patel", subject_id: "cmd.capt.patel", roles: ["COMMAND_OVERSIGHT"], command_id: "warcom", facility_id: "COMMAND-NAVSUP", resource_type: "summary", resource_id: "inventory-readiness", action: "OVERSIGHT_READ", capability_code: "oversight.read", lifecycle_state: null, credential_assurance: "HIGH", policy_id: "pol-020", permitted: 1, reason_code: "PERMITTED", obligations: [], correlation_id: null },
+  { id: "authz-seed-08", decided_at: hoursAgo(5), principal_id: "pr-aud-wright", subject_id: "aud.d.wright", roles: ["AUDITOR_ASSESSOR"], command_id: "warcom", facility_id: "COMMAND-NAVSUP", resource_type: "finding", resource_id: "FND-2026-001", action: "ASSURANCE_FINDING_CLOSE", capability_code: "assurance.finding.close", lifecycle_state: "OPEN", credential_assurance: "HIGH", policy_id: "pol-019", permitted: 0, reason_code: "MISSING_CAPABILITY", obligations: [], correlation_id: null },
+  { id: "authz-seed-09", decided_at: daysAgo(1), principal_id: "pr-it-okoro", subject_id: "it.a.okoro", roles: ["IT_ADMINISTRATOR"], command_id: "nswg-2", facility_id: "FAC-STORE", resource_type: "deployment_approval", resource_id: "apr-3", action: "RELEASE_APPROVE", capability_code: "release.approve", lifecycle_state: "pending", credential_assurance: "HIGH", policy_id: "pol-010", permitted: 1, reason_code: "PERMITTED", obligations: ["RECORD_APPROVAL_NOTE"], correlation_id: null },
 ];
 
 insert(
@@ -825,11 +945,11 @@ insert(
 // ===========================================================================
 
 insert("security_assets", [
-  { id: "asset-api-gateway", name: "Public API gateway", asset_type: "API", environment: "PRODUCTION", owner_command: "NAVSUP-DEMO", facility_id: "FAC-STORE", criticality: "CRITICAL", exposure: "PARTNER", status: "ACTIVE", created_at: daysAgo(240), notes: "Terminates mutual TLS for partner commands." },
-  { id: "asset-sync-service", name: "Offline sync service", asset_type: "CONTAINER", environment: "PRODUCTION", owner_command: "NAVSUP-DEMO", facility_id: "FAC-STORE", criticality: "HIGH", exposure: "INTERNAL", status: "ACTIVE", created_at: daysAgo(200), notes: null },
-  { id: "asset-db", name: "H-LIFT primary database", asset_type: "DATABASE", environment: "PRODUCTION", owner_command: "NAVSUP-DEMO", facility_id: "FAC-STORE", criticality: "CRITICAL", exposure: "INTERNAL", status: "ACTIVE", created_at: daysAgo(260), notes: "Hash-chained audit bus stored here." },
-  { id: "asset-field-kit-7", name: "Field kit 7 endpoint", asset_type: "ENDPOINT", environment: "FIELD", owner_command: "NAVSUP-DEMO", facility_id: "FAC-STORE", criticality: "MEDIUM", exposure: "INTERNET", status: "ACTIVE", created_at: daysAgo(150), notes: "Intermittent connectivity." },
-  { id: "asset-idp-bridge", name: "Identity adapter bridge", asset_type: "IDP", environment: "PRODUCTION", owner_command: "NAVSUP-DEMO", facility_id: "FAC-STORE", criticality: "CRITICAL", exposure: "INTERNAL", status: "ACTIVE", created_at: daysAgo(180), notes: "Holds no credentials; assertion verification only." },
+  { id: "asset-api-gateway", name: "Public API gateway", asset_type: "API", environment: "PRODUCTION", owner_command: "logsu-2", facility_id: "FAC-STORE", criticality: "CRITICAL", exposure: "PARTNER", status: "ACTIVE", created_at: daysAgo(240), notes: "Terminates mutual TLS for partner commands." },
+  { id: "asset-sync-service", name: "Offline sync service", asset_type: "CONTAINER", environment: "PRODUCTION", owner_command: "logsu-2", facility_id: "FAC-STORE", criticality: "HIGH", exposure: "INTERNAL", status: "ACTIVE", created_at: daysAgo(200), notes: null },
+  { id: "asset-db", name: "H-LIFT primary database", asset_type: "DATABASE", environment: "PRODUCTION", owner_command: "warcom", facility_id: "FAC-STORE", criticality: "CRITICAL", exposure: "INTERNAL", status: "ACTIVE", created_at: daysAgo(260), notes: "Hash-chained audit bus stored here." },
+  { id: "asset-field-kit-7", name: "Field kit 7 endpoint", asset_type: "ENDPOINT", environment: "FIELD", owner_command: "st-2", facility_id: "FAC-STORE", criticality: "MEDIUM", exposure: "INTERNET", status: "ACTIVE", created_at: daysAgo(150), notes: "Intermittent connectivity." },
+  { id: "asset-idp-bridge", name: "Identity adapter bridge", asset_type: "IDP", environment: "PRODUCTION", owner_command: "nswg-2", facility_id: "FAC-STORE", criticality: "CRITICAL", exposure: "INTERNAL", status: "ACTIVE", created_at: daysAgo(180), notes: "Holds no credentials; assertion verification only." },
 ]);
 
 insert("security_ingest_sources", [
@@ -1134,6 +1254,7 @@ queueAudit({ occurred_at: hoursAgo(22), plane: "OPERATIONAL", event_type: "MATER
 queueAudit({ occurred_at: daysAgo(1), plane: "OPERATIONAL", event_type: "QUANTITY_VARIANCE_RECORDED", source: "hlift.operational", subject_id: "cust.k.rivera", resource_type: "container", resource_id: "ct-adh-001", outcome: "DISPOSITION_REQUIRED", severity: "HIGH", payload: { variance: "2.000", uom: "OZ", written_off: false } });
 queueAudit({ occurred_at: daysAgo(6), plane: "OPERATIONAL", event_type: "CONTAINER_QUARANTINED", source: "hlift.operational", subject_id: "cust.k.rivera", resource_type: "container", resource_id: "ct-dcn-002", outcome: "QUARANTINED", severity: "MEDIUM", payload: { reason: "label illegible; expiry unknown" } });
 queueAudit({ occurred_at: daysAgo(20), plane: "OPERATIONAL", event_type: "CONTAINER_DISPOSED", source: "hlift.operational", subject_id: "safety-office", resource_type: "container", resource_id: "ct-dcn-001", outcome: "DISPOSED", severity: "MEDIUM", payload: { quantity: "5.000", uom: "L", route: "hazardous waste contractor" } });
+queueAudit({ occurred_at: daysAgo(44), plane: "OPERATIONAL", event_type: "CUSTODY_TRANSFER", source: "hlift.operational", subject_id: "cust.k.rivera", resource_type: "custody_transfer", resource_id: "tr-0001", correlation_id: "corr-deploy-001", outcome: "TRANSFERRED", severity: "MEDIUM", payload: { transfer_group: "tr-group-001", container_id: "ct-nsw-bat-9001", source_command_id: "logsu-2", destination_command_id: "tu-east-bravo", deployment_order: "DEPL-2026-003" } });
 
 queueAudit({ occurred_at: hoursAgo(4), plane: "CYBERSECURITY", event_type: "SECURITY_EVENT_INGESTED", source: "api-gateway", subject_id: "op.j.mendez", resource_type: "api_token", resource_id: "tok-8841", correlation_id: "corr-export-01", outcome: "DETECTED", severity: "HIGH", payload: { event_id: "sec-1", event_type: "DATA_EXPORT" } });
 queueAudit({ occurred_at: hoursAgo(4), plane: "CYBERSECURITY", event_type: "INCIDENT_OPENED", source: "hlift.security", subject_id: "cyber.s.lee", resource_type: "security_incident", resource_id: "inc-1", correlation_id: "corr-export-01", outcome: "OPEN", severity: "HIGH", payload: { code: "INC-2026-001" } });
@@ -1178,3 +1299,4 @@ insert("audit_events", auditRows);
 
 console.log(`Seeded ${dbPath}`);
 db.close();
+

@@ -20,6 +20,8 @@ export const ACTION_CAPABILITY: Record<string, string> = {
   MATERIAL_RETURN: "material.return",
   MATERIAL_INSPECT: "material.inspect",
   MATERIAL_RELABEL: "material.relabel",
+  MATERIAL_TRANSFER: "material.transfer",
+  CUSTODY_UNUSED_RETURN: "material.transfer",
   CONTAINER_TRANSITION: "inventory.adjust",
   INVENTORY_READ: "inventory.read",
   INVENTORY_ADJUST: "inventory.adjust",

@@ -1,5 +1,6 @@
 import { fail, ok, readJson } from "@/lib/http";
 import { all, one, run } from "@/lib/db";
+import { appendAuditEvent } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,19 @@ export async function POST(request: Request) {
 
     const issues = all<{ id: string; key: string }>("SELECT id, key FROM engineering_issues");
     const issue = issues.find((i) => branch.toUpperCase().includes(i.key.toUpperCase()));
-    if (!issue) return ok({ received: true, linked: false });
+    if (!issue) {
+      appendAuditEvent({
+        plane: "CYBERSECURITY",
+        event_type: "INTEGRATION_EVENT_INGESTED",
+        source: "bitbucket-webhook",
+        subject_id: null,
+        resource_type: "code_link",
+        resource_id: `bb-${pr.id}`,
+        outcome: "UNLINKED",
+        payload: { branch, state, linked: false, updated },
+      });
+      return ok({ received: true, linked: false });
+    }
 
     const existing = one<{ id: string }>("SELECT id FROM code_links WHERE pr_url = ?", url);
     if (existing) {
@@ -42,6 +55,16 @@ export async function POST(request: Request) {
         `bb-${pr.id}`, issue.id, branch, sha, url, state, updated
       );
     }
+    appendAuditEvent({
+      plane: "CYBERSECURITY",
+      event_type: "INTEGRATION_EVENT_INGESTED",
+      source: "bitbucket-webhook",
+      subject_id: null,
+      resource_type: "code_link",
+      resource_id: `bb-${pr.id}`,
+      outcome: "OK",
+      payload: { branch, state, linked: !!issue, updated },
+    });
     return ok({ received: true, linked: true, issue: issue.key });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Invalid payload.", 400);

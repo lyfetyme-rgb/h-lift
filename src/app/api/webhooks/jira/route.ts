@@ -1,5 +1,6 @@
 import { fail, ok, readJson } from "@/lib/http";
 import { all, one, run } from "@/lib/db";
+import { appendAuditEvent } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,16 @@ export async function POST(request: Request) {
         `jira-${key}`, key, summary, status, priority, assignee, url, created
       );
     }
+    appendAuditEvent({
+      plane: "CYBERSECURITY",
+      event_type: "INTEGRATION_EVENT_INGESTED",
+      source: "jira-webhook",
+      subject_id: null,
+      resource_type: "engineering_issue",
+      resource_id: key,
+      outcome: "OK",
+      payload: { event: body?.webhookEvent ?? "unknown", updated },
+    });
     return ok({ received: true, key, event: body?.webhookEvent ?? "unknown" });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Invalid payload.", 400);

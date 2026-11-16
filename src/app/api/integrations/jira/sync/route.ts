@@ -2,6 +2,7 @@ import { fail, forbidden, ok } from "@/lib/http";
 import { all, one, run } from "@/lib/db";
 import { requireRequest } from "@/lib/authz";
 import { currentPrincipal } from "@/lib/identity";
+import { appendAuditEvent } from "@/lib/audit";
 import { fetchJiraIssues, jiraConfig } from "@/lib/integrations/jira";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,8 @@ export async function POST(request: Request) {
       resource_type: "integration",
       resource_id: "jira",
     });
+
+    const principal = await currentPrincipal();
 
     const cfg = jiraConfig();
     if (!cfg) {
@@ -53,6 +56,22 @@ export async function POST(request: Request) {
       }
       upserted++;
     }
+
+    appendAuditEvent({
+      plane: "CYBERSECURITY",
+      event_type: "INTEGRATION_SYNC",
+      source: "hlift.integrations.jira",
+      subject_id: principal?.subject_id ?? null,
+      resource_type: "integration",
+      resource_id: "jira",
+      outcome: "OK",
+      payload: {
+        project: cfg.projectKey,
+        fetched: issues.length,
+        upserted,
+        synced_at: now,
+      },
+    });
 
     return ok({ configured: true, project: cfg.projectKey, fetched: issues.length, upserted, synced_at: now });
   } catch (e) {

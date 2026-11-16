@@ -564,6 +564,35 @@ export function FindingStatus({
   );
 }
 
+export function IntegrationSync({ kind, label }: { kind: "jira" | "bitbucket"; label: string }) {
+  const { busy, error, ok, run } = useAction();
+  const [result, setResult] = useState<string | null>(null);
+
+  const sync = () =>
+    run(async () => {
+      const data = (await post(`/api/integrations/${kind}/sync`, {})) as {
+        fetched?: number;
+        upserted?: number;
+        linked?: number;
+      };
+      const parts: string[] = [`fetched ${data.fetched ?? 0}`];
+      if (typeof data.upserted === "number") parts.push(`upserted ${data.upserted}`);
+      if (typeof data.linked === "number") parts.push(`linked ${data.linked}`);
+      setResult(`${label}: ${parts.join(", ")}.`);
+    }, `${label} complete.`);
+
+  return (
+    <div>
+      <button className="small primary" disabled={busy} onClick={sync}>
+        {busy ? "Syncing…" : label}
+      </button>
+      {result ? <div className="okmsg">{result}</div> : null}
+      {error ? <div className="error">{error}</div> : null}
+      {ok ? <div className="okmsg">{ok}</div> : null}
+    </div>
+  );
+}
+
 export function CopyButton({ text, label = "Copy Markdown" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (

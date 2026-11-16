@@ -1,4 +1,4 @@
-// Integrity check used after reseeding. Run: node scripts/verify-seed.mjs
+﻿// Integrity check used after reseeding. Run: node scripts/verify-seed.mjs
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
@@ -132,9 +132,9 @@ console.log(`apr-3:                ${apr3.status} (approver ${apr3.approver ?? "
 console.log(`cf-4:                 ${cf4.status}`);
 console.log(`materials/containers: ${materials} / ${containers}`);
 console.log(`inspections:          ${pending} pending, ${accepted} accepted`);
-console.log(`returned pail:        ${pail.current_quantity} GAL · ${pail.state}`);
+console.log(`returned pail:        ${pail.current_quantity} GAL Â· ${pail.state}`);
 console.log(`pail txn:             issued ${pailTxn.issued_quantity} - consumed ${pailTxn.consumed_quantity} - returned ${pailTxn.returned_quantity} (${pailTxn.status})`);
-console.log(`declared tube:        current ${tube18.current_quantity ?? "NULL (UNKNOWN)"} · ${tube18.state}`);
+console.log(`declared tube:        current ${tube18.current_quantity ?? "NULL (UNKNOWN)"} Â· ${tube18.state}`);
 console.log(`adhesive variance:    ${adhesiveVariance} OZ`);
 console.log(`illegal available:    ${illegalAvailable}`);
 console.log(`REAL quantity cols:   ${realColumns.length ? realColumns.join(", ") : "none"}`);
@@ -154,9 +154,9 @@ const pristine =
   apr3.status === "pending" &&
   cf4.status === "UNKNOWN" &&
   legacyTables.length === 0 &&
-  migrations === 7 &&
-  materials === 7 &&
-  containers === 23 &&
+  migrations === 8 &&
+  materials === 11 &&
+  containers === 41 &&
   pending === 3 &&
   accepted === 1 &&
   pail.current_quantity === "3.400" &&
@@ -184,9 +184,10 @@ const pristine =
   poam === 7 &&
   decisions === 9 &&
   denied === 5 &&
-  auditEvents === 31 &&
+  auditEvents === 32 &&
   chainValid;
 
 console.log(pristine ? "PRISTINE SEED OK" : "SEED NOT PRISTINE");
 db.close();
 process.exit(pristine ? 0 : 1);
+
