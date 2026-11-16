@@ -68,6 +68,7 @@ const groups: { label: string; items: NavItem[] }[] = [
       { href: "/assurance", label: "RMF posture", count: "findings" },
       { href: "/assurance/controls", label: "Controls & evidence" },
       { href: "/assurance/findings", label: "Findings & POA&M", count: "poam" },
+      { href: "/improvement", label: "Effectiveness loop" },
     ],
   },
   {

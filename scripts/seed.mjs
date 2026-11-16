@@ -1245,6 +1245,11 @@ insert("poam_entries", [
   { id: "poam-7", code: "POAM-2026-007", finding_id: "fnd-7", control_id: "ctl-023", milestone: "Re-issue incident assistance contact list", status: "COMPLETED", scheduled_at: daysAgo(30), completed_at: daysAgo(28), owner_subject: "cyber.s.lee", residual_risk: "LOW", notes: "Verified." },
 ]);
 
+insert("tuning_recommendations", [
+  { id: "rec-seed-001", created_at: hoursAgo(6), category: "AUTHZ", title: "Review top denial reason: MISSING_CAPABILITY", detail: "Frequent denials cite a missing capability. If legitimate, extend the role grant in role_capabilities (with the command's approval); otherwise the requester is correctly blocked.", severity: "MEDIUM", evidence: JSON.stringify({ top_reason: "MISSING_CAPABILITY", count: 3 }), source: "MANUAL", status: "PROPOSED", policy_id: "pol-002" },
+  { id: "rec-seed-002", created_at: hoursAgo(7), category: "INSPECTION", title: "Inspection backlog", detail: "3 return inspection(s) are pending. Unresolved RETURN_HOLD containers cannot be restocked; schedule inspector time or escalate.", severity: "MEDIUM", evidence: JSON.stringify({ pending: 3 }), source: "MANUAL", status: "PROPOSED", policy_id: null },
+]);
+
 // ===========================================================================
 // Audit bus: operational, cybersecurity, assurance and governance events
 // ===========================================================================

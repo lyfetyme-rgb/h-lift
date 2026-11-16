@@ -157,7 +157,7 @@ const pristine =
   apr3.status === "pending" &&
   cf4.status === "UNKNOWN" &&
   legacyTables.length === 0 &&
-  migrations === 8 &&
+  migrations === 9 &&
   commandCount === 24 &&
   jurisdictionCount === 24 &&
   materials === 11 &&
@@ -195,4 +195,5 @@ const pristine =
 console.log(pristine ? "PRISTINE SEED OK" : "SEED NOT PRISTINE");
 db.close();
 process.exit(pristine ? 0 : 1);
+
 
