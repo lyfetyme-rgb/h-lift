@@ -406,3 +406,15 @@ Copy the Markdown with the button on `/weekly`, or fetch `/api/weekly-status?for
 - Seed data is fictional. No real mission, personnel or supplier data is present. NSNs and CVEs are illustrative; manufacturer/part numbers are labelled "(demo)".
 - The hazmat correction is schema-level: legacy `hazmat_items`, `hazmat_events`, `hazmat_checks` and any `quantity_on_hand` / REAL quantity column are removed. Do not reintroduce them.
 - The audit chain is only useful if it is verified. `/audit` and `npm run db:verify` recompute it from genesis. Do not edit `audit_events` rows in place; append a correcting event instead.
+
+---
+
+## License
+
+H-LIFT is released under the **Business Source License 1.1** (see `LICENSE`).
+
+- You may **view, modify, and make non-production use** of the source code, and contribute improvements.
+- **Production use** — including any deployment supporting a government, military, or commercial operation — requires a paid license agreement with the Licensor.
+- On the **Change Date (2029-11-16)**, this version of the Licensed Work becomes available under the **Apache License, Version 2.0**.
+
+For licensing inquiries, contact the repository maintainers.
