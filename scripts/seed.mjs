@@ -513,14 +513,14 @@ for (let i = 1; i <= 4; i++) {
     })
   );
 }
-// One battery lot already transferred to TU-EAST-BRAVO (prior pack-out)
+// One battery lot already transferred to TU-STUTTGART-01 (prior pack-out)
 containers.push(
   mkContainer({
     id: "ct-nsw-bat-9001", code: "CT-NSW-BAT-9001", material: "mat-nsw-001",
     lot: "NSW2407A", package: "unit", nominal: "1.000", current: "1.000",
     uom: "EA", seal: "SEALED", made: "2026-02-07T00:00:00.000Z", expires: "2031-02-07T00:00:00.000Z",
-    location: "TU-EAST-BRAVO / pack-out kit", condition: "SERVICEABLE", state: "ISSUED",
-    command: "tu-east-bravo", facility: "FAC-STORE", reason: "Packed out to TU-EAST-BRAVO on deployment order DEPL-2026-003",
+    location: "TU-STUTTGART-01 / pack-out kit", condition: "SERVICEABLE", state: "ISSUED",
+    command: "tu-stuttgart-01", facility: "FAC-STORE", reason: "Packed out to TU-STUTTGART-01 on deployment order DEPL-2026-003",
     created: daysAgo(45),
   })
 );
@@ -574,7 +574,7 @@ insert("custody_assignments", [
   ...[1,2,3,4].map((i) => ({ id: `cust-res-${i}`, container_id: `ct-nsw-res-${String(i).padStart(4,"0")}`, custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 stores", facility_id: "FAC-STORE", accepted_at: daysAgo(35), due_at: null, released_at: null, status: "ACTIVE", notes: "Available for pack-out." })),
   ...[1,2,3].map((i) => ({ id: `cust-lub-${i}`, container_id: `ct-nsw-lub-${String(i).padStart(4,"0")}`, custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 dive locker", facility_id: "FAC-STORE", accepted_at: daysAgo(30), due_at: null, released_at: null, status: "ACTIVE", notes: "Available for pack-out." })),
   ...[1,2,3,4].map((i) => ({ id: `cust-clp-${i}`, container_id: `ct-nsw-clp-${String(i).padStart(4,"0")}`, custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 armory", facility_id: "FAC-STORE", accepted_at: daysAgo(25), due_at: null, released_at: null, status: "ACTIVE", notes: "Available for pack-out." })),
-  { id: "cust-bat-9001", container_id: "ct-nsw-bat-9001", custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 stores", facility_id: "FAC-STORE", accepted_at: daysAgo(60), due_at: null, released_at: daysAgo(45), status: "RELEASED", notes: "Packed out to TU-EAST-BRAVO on deployment order DEPL-2026-003." },
+  { id: "cust-bat-9001", container_id: "ct-nsw-bat-9001", custodian_id: "cust.k.rivera", custodian_label: "LOGSU-2 stores", facility_id: "FAC-STORE", accepted_at: daysAgo(60), due_at: null, released_at: daysAgo(45), status: "RELEASED", notes: "Packed out to TU-STUTTGART-01 on deployment order DEPL-2026-003." },
 ]);
 
 const mkRequest = (r) => ({
@@ -769,27 +769,39 @@ insert("blockers", [
 
 insert("commands", [
   // NSW enterprise root
-  { id: "warcom", code: "WARCOM", name: "Naval Special Warfare Command", level: "HQ", parent_id: null, description: "NSW operational and administrative headquarters.", created_at: daysAgo(400) },
-  // Type Commands (East / West)
-  { id: "nswg-1", code: "NSWG-1", name: "Naval Special Warfare Group 1 (West)", level: "TYPE_COMMAND", parent_id: "warcom", description: "West Coast NSW type command; Coronado.", created_at: daysAgo(395) },
-  { id: "nswg-2", code: "NSWG-2", name: "Naval Special Warfare Group 2 (East)", level: "TYPE_COMMAND", parent_id: "warcom", description: "East Coast NSW type command; Little Creek.", created_at: daysAgo(395) },
-  // Installations / Support Units
-  { id: "logsu-1", code: "LOGSU-1", name: "Logistics Support Unit 1", level: "INSTALLATION", parent_id: "nswg-1", description: "West Coast logistics support for deploying NSW elements.", created_at: daysAgo(380) },
-  { id: "logsu-2", code: "LOGSU-2", name: "Logistics Support Unit 2", level: "INSTALLATION", parent_id: "nswg-2", description: "East Coast logistics support for deploying NSW elements.", created_at: daysAgo(380) },
-  // Tenants under LOGSU-1 (West)
-  { id: "st-1", code: "ST-1", name: "SEAL Team 1", level: "TENANT", parent_id: "logsu-1", description: "SEAL team; West.", created_at: daysAgo(300) },
-  { id: "st-3", code: "ST-3", name: "SEAL Team 3", level: "TENANT", parent_id: "logsu-1", description: "SEAL team; West.", created_at: daysAgo(300) },
-  { id: "sbt-12", code: "SBT-12", name: "Special Boat Team 12", level: "TENANT", parent_id: "logsu-1", description: "SWCC special boat team; West.", created_at: daysAgo(300) },
-  { id: "tu-west-alpha", code: "TU-WEST-ALPHA", name: "Task Unit West Alpha", level: "TENANT", parent_id: "logsu-1", description: "Deploying task unit; West.", created_at: daysAgo(290) },
-  // Tenants under LOGSU-2 (East)
-  { id: "st-2", code: "ST-2", name: "SEAL Team 2", level: "TENANT", parent_id: "logsu-2", description: "SEAL team; East.", created_at: daysAgo(300) },
-  { id: "st-4", code: "ST-4", name: "SEAL Team 4", level: "TENANT", parent_id: "logsu-2", description: "SEAL team; East.", created_at: daysAgo(300) },
-  { id: "sbt-20", code: "SBT-20", name: "Special Boat Team 20", level: "TENANT", parent_id: "logsu-2", description: "SWCC special boat team; East.", created_at: daysAgo(300) },
-  { id: "tu-east-bravo", code: "TU-EAST-BRAVO", name: "Task Unit East Bravo", level: "TENANT", parent_id: "logsu-2", description: "Deploying task unit; East.", created_at: daysAgo(290) },
+  { id: "warcom", code: "WARCOM", name: "Naval Special Warfare Command", level: "HQ", parent_id: null, jurisdiction_tag: "CONUS-CA", unit_type: "HOMEPORT", description: "NSW operational and administrative headquarters; Coronado, CA.", created_at: daysAgo(400) },
+  // Type Commands
+  { id: "nswg-1", code: "NSWG-1", name: "Naval Special Warfare Group 1 (West)", level: "TYPE_COMMAND", parent_id: "warcom", jurisdiction_tag: "CONUS-CA", unit_type: "HOMEPORT", description: "West Coast NSW type command; Coronado, CA.", created_at: daysAgo(395) },
+  { id: "nswg-2", code: "NSWG-2", name: "Naval Special Warfare Group 2 (East)", level: "TYPE_COMMAND", parent_id: "warcom", jurisdiction_tag: "CONUS-VA", unit_type: "HOMEPORT", description: "East Coast NSW type command; Little Creek, VA.", created_at: daysAgo(395) },
+  { id: "nswg-4", code: "NSWG-4", name: "Naval Special Warfare Group 4", level: "TYPE_COMMAND", parent_id: "warcom", jurisdiction_tag: "CONUS-VA", unit_type: "HOMEPORT", description: "SBT / riverine type command; Little Creek, VA.", created_at: daysAgo(395) },
+  { id: "nswcen", code: "NSWCEN", name: "Naval Special Warfare Center (Training Command)", level: "TYPE_COMMAND", parent_id: "warcom", jurisdiction_tag: "CONUS-CA", unit_type: "HOMEPORT", description: "NSW training command; schoolhouse and detachments.", created_at: daysAgo(395) },
+  // Installations / forward hubs
+  { id: "logsu-1", code: "LOGSU-1", name: "Logistics Support Unit 1", level: "INSTALLATION", parent_id: "nswg-1", jurisdiction_tag: "CONUS-CA", unit_type: "HOMEPORT", description: "West Coast logistics support; Coronado, CA.", created_at: daysAgo(380) },
+  { id: "logsu-2", code: "LOGSU-2", name: "Logistics Support Unit 2", level: "INSTALLATION", parent_id: "nswg-2", jurisdiction_tag: "CONUS-VA", unit_type: "HOMEPORT", description: "East Coast logistics support; Little Creek, VA.", created_at: daysAgo(380) },
+  { id: "det-fallon", code: "DET-FALLON", name: "NAS Fallon Training Detachment", level: "INSTALLATION", parent_id: "nswcen", jurisdiction_tag: "CONUS-NV", unit_type: "TRAINING_DET", description: "Desert / air-ground training hub; NAS Fallon, NV.", created_at: daysAgo(380) },
+  { id: "det-kodiak", code: "DET-KODIAK", name: "Kodiak Cold Weather Maritime Training Detachment", level: "INSTALLATION", parent_id: "nswcen", jurisdiction_tag: "CONUS-AK", unit_type: "TRAINING_DET", description: "Cold weather maritime training; Kodiak, AK.", created_at: daysAgo(380) },
+  { id: "nswu-2-stuttgart", code: "NSWU-2-STUTTGART", name: "NSW Unit 2 Stuttgart (SOCEUR)", level: "INSTALLATION", parent_id: "nswg-2", jurisdiction_tag: "OCONUS-EU-DE", unit_type: "FORWARD_HUB", description: "European forward hub; Stuttgart, Germany.", created_at: daysAgo(380) },
+  { id: "nswu-1-guam", code: "NSWU-1-GUAM", name: "NSW Unit 1 Guam (Indo-Pacific)", level: "INSTALLATION", parent_id: "nswg-1", jurisdiction_tag: "OCONUS-PAC", unit_type: "FORWARD_HUB", description: "Indo-Pacific forward hub; Guam.", created_at: daysAgo(380) },
+  { id: "nswu-4-south", code: "NSWU-4-SOUTH", name: "NSW Unit 4 SOUTH (SOCSOUTH)", level: "INSTALLATION", parent_id: "nswg-4", jurisdiction_tag: "OCONUS-SOUTHCOM", unit_type: "FORWARD_HUB", description: "South America / Caribbean forward support hub; Homestead and AOR.", created_at: daysAgo(380) },
+  // Tenant / operating units (West)
+  { id: "st-1", code: "ST-1", name: "SEAL Team 1", level: "TENANT", parent_id: "logsu-1", jurisdiction_tag: "CONUS-CA", unit_type: "HOMEPORT", description: "SEAL team; West.", created_at: daysAgo(300) },
+  { id: "st-3", code: "ST-3", name: "SEAL Team 3", level: "TENANT", parent_id: "logsu-1", jurisdiction_tag: "CONUS-CA", unit_type: "HOMEPORT", description: "SEAL team; West.", created_at: daysAgo(300) },
+  { id: "sbt-12", code: "SBT-12", name: "Special Boat Team 12", level: "TENANT", parent_id: "logsu-1", jurisdiction_tag: "CONUS-CA", unit_type: "HOMEPORT", description: "SWCC special boat team; West.", created_at: daysAgo(300) },
+  { id: "tu-fallon-01", code: "TU-FALLON-01", name: "TU-Fallon-01 (rotating)", level: "TENANT", parent_id: "det-fallon", jurisdiction_tag: "CONUS-NV", unit_type: "DEPLOYED_TU", description: "Fallon rotation task unit.", created_at: daysAgo(290) },
+  // Tenant / operating units (East)
+  { id: "st-2", code: "ST-2", name: "SEAL Team 2", level: "TENANT", parent_id: "logsu-2", jurisdiction_tag: "CONUS-VA", unit_type: "HOMEPORT", description: "SEAL team; East.", created_at: daysAgo(300) },
+  { id: "st-4", code: "ST-4", name: "SEAL Team 4", level: "TENANT", parent_id: "logsu-2", jurisdiction_tag: "CONUS-VA", unit_type: "HOMEPORT", description: "SEAL team; East.", created_at: daysAgo(300) },
+  { id: "sbt-20", code: "SBT-20", name: "Special Boat Team 20", level: "TENANT", parent_id: "logsu-2", jurisdiction_tag: "CONUS-VA", unit_type: "HOMEPORT", description: "SWCC special boat team; East.", created_at: daysAgo(300) },
+  { id: "tu-stuttgart-01", code: "TU-STUTTGART-01", name: "TU-Stuttgart-01 (EU forward)", level: "TENANT", parent_id: "nswu-2-stuttgart", jurisdiction_tag: "OCONUS-EU-DE", unit_type: "DEPLOYED_TU", description: "European forward rotation task unit.", created_at: daysAgo(290) },
+  // SOUTHCOM / South America elements
+  { id: "sbt-22", code: "SBT-22", name: "Special Boat Team 22", level: "TENANT", parent_id: "nswu-4-south", jurisdiction_tag: "OCONUS-SOUTHCOM", unit_type: "HOMEPORT", description: "Riverine / special boat team; SOUTHCOM.", created_at: daysAgo(290) },
+  { id: "det-south-colombia", code: "DET-SOUTH-COLOMBIA", name: "Det SOUTH Colombia", level: "TENANT", parent_id: "nswu-4-south", jurisdiction_tag: "OCONUS-SOUTHCOM-CO", unit_type: "FORWARD_HUB", description: "Colombia maritime element; SOUTHCOM.", created_at: daysAgo(290) },
+  { id: "det-south-peru", code: "DET-SOUTH-PERU", name: "Det SOUTH Peru", level: "TENANT", parent_id: "nswu-4-south", jurisdiction_tag: "OCONUS-SOUTHCOM-PE", unit_type: "FORWARD_HUB", description: "Peru maritime element; SOUTHCOM.", created_at: daysAgo(290) },
+  { id: "tu-panama-01", code: "TU-PANAMA-01", name: "TU-Panama-01 (riverine)", level: "TENANT", parent_id: "nswu-4-south", jurisdiction_tag: "OCONUS-SOUTHCOM-PA", unit_type: "DEPLOYED_TU", description: "Panama riverine task unit.", created_at: daysAgo(290) },
 ]);
 
 insert("custody_transfers", [
-  { id: "tr-0001", transfer_group: "tr-group-001", container_id: "ct-nsw-bat-9001", source_command_id: "logsu-2", destination_command_id: "tu-east-bravo", custodian_id: "cust.k.rivera", packed_at: daysAgo(45), transferred_at: daysAgo(44), due_at: daysAhead(60), deployment_order: "DEPL-2026-003", status: "TRANSFERRED", returned_unused_quantity: null, returned_unused_unit: null, reconciliation_notes: null, notes: "Packed out for East Coast deployment.", correlation_id: "corr-deploy-001", created_by: "cust.k.rivera" },
+  { id: "tr-0001", transfer_group: "tr-group-001", container_id: "ct-nsw-bat-9001", source_command_id: "logsu-2", destination_command_id: "tu-stuttgart-01", custodian_id: "cust.k.rivera", packed_at: daysAgo(45), transferred_at: daysAgo(44), due_at: daysAhead(60), deployment_order: "DEPL-2026-003", status: "TRANSFERRED", returned_unused_quantity: null, returned_unused_unit: null, reconciliation_notes: null, notes: "Packed out for East Coast deployment.", correlation_id: "corr-deploy-001", created_by: "cust.k.rivera" },
 ]);
 
 insert("principals", [
@@ -1254,7 +1266,7 @@ queueAudit({ occurred_at: hoursAgo(22), plane: "OPERATIONAL", event_type: "MATER
 queueAudit({ occurred_at: daysAgo(1), plane: "OPERATIONAL", event_type: "QUANTITY_VARIANCE_RECORDED", source: "hlift.operational", subject_id: "cust.k.rivera", resource_type: "container", resource_id: "ct-adh-001", outcome: "DISPOSITION_REQUIRED", severity: "HIGH", payload: { variance: "2.000", uom: "OZ", written_off: false } });
 queueAudit({ occurred_at: daysAgo(6), plane: "OPERATIONAL", event_type: "CONTAINER_QUARANTINED", source: "hlift.operational", subject_id: "cust.k.rivera", resource_type: "container", resource_id: "ct-dcn-002", outcome: "QUARANTINED", severity: "MEDIUM", payload: { reason: "label illegible; expiry unknown" } });
 queueAudit({ occurred_at: daysAgo(20), plane: "OPERATIONAL", event_type: "CONTAINER_DISPOSED", source: "hlift.operational", subject_id: "safety-office", resource_type: "container", resource_id: "ct-dcn-001", outcome: "DISPOSED", severity: "MEDIUM", payload: { quantity: "5.000", uom: "L", route: "hazardous waste contractor" } });
-queueAudit({ occurred_at: daysAgo(44), plane: "OPERATIONAL", event_type: "CUSTODY_TRANSFER", source: "hlift.operational", subject_id: "cust.k.rivera", resource_type: "custody_transfer", resource_id: "tr-0001", correlation_id: "corr-deploy-001", outcome: "TRANSFERRED", severity: "MEDIUM", payload: { transfer_group: "tr-group-001", container_id: "ct-nsw-bat-9001", source_command_id: "logsu-2", destination_command_id: "tu-east-bravo", deployment_order: "DEPL-2026-003" } });
+queueAudit({ occurred_at: daysAgo(44), plane: "OPERATIONAL", event_type: "CUSTODY_TRANSFER", source: "hlift.operational", subject_id: "cust.k.rivera", resource_type: "custody_transfer", resource_id: "tr-0001", correlation_id: "corr-deploy-001", outcome: "TRANSFERRED", severity: "MEDIUM", payload: { transfer_group: "tr-group-001", container_id: "ct-nsw-bat-9001", source_command_id: "logsu-2", destination_command_id: "tu-stuttgart-01", deployment_order: "DEPL-2026-003" } });
 
 queueAudit({ occurred_at: hoursAgo(4), plane: "CYBERSECURITY", event_type: "SECURITY_EVENT_INGESTED", source: "api-gateway", subject_id: "op.j.mendez", resource_type: "api_token", resource_id: "tok-8841", correlation_id: "corr-export-01", outcome: "DETECTED", severity: "HIGH", payload: { event_id: "sec-1", event_type: "DATA_EXPORT" } });
 queueAudit({ occurred_at: hoursAgo(4), plane: "CYBERSECURITY", event_type: "INCIDENT_OPENED", source: "hlift.security", subject_id: "cyber.s.lee", resource_type: "security_incident", resource_id: "inc-1", correlation_id: "corr-export-01", outcome: "OPEN", severity: "HIGH", payload: { code: "INC-2026-001" } });
@@ -1299,4 +1311,5 @@ insert("audit_events", auditRows);
 
 console.log(`Seeded ${dbPath}`);
 db.close();
+
 

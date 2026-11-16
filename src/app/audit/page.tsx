@@ -3,6 +3,7 @@ import { Badge, Kpi, Page, Panel } from "@/components/ui";
 import { authorize, canRead, decisionSummary } from "@/lib/authz";
 import { currentPrincipal } from "@/lib/identity";
 import { fmtDateTime, rel } from "@/lib/format";
+import SyncControls from "@/components/SyncControls";
 import { auditCount, recentAudit, verifyAuditChain } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -155,6 +156,10 @@ export default async function AuditPage() {
             </tbody>
           </table>
         </div>
+      </Panel>
+
+      <Panel title="DDIL snapshot (offline detachments)">
+        <SyncControls sourceCommandId={principal?.command_id ?? null} targetCommandId={principal?.command_id ?? null} />
       </Panel>
 
       <Panel title="Hash chain">

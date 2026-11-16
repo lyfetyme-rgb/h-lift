@@ -50,6 +50,8 @@ for (const table of ["materials", "containers", "issue_requests", "issue_transac
 
 // ---- three-plane invariants ------------------------------------------------
 const migrations = scalar("SELECT COUNT(*) FROM schema_migrations");
+const commandCount = scalar("SELECT COUNT(*) FROM commands");
+const jurisdictionCount = scalar("SELECT COUNT(*) FROM commands WHERE jurisdiction_tag IS NOT NULL");
 
 const failedLogins = scalar(
   "SELECT COUNT(*) FROM security_events WHERE event_type = 'AUTHENTICATION' AND outcome = 'FAILURE'"
@@ -128,6 +130,7 @@ for (const row of q("SELECT * FROM audit_events ORDER BY seq ASC")) {
 
 console.log(`tables:               ${tables.length}${legacyTables.length ? ` (legacy: ${legacyTables.join(", ")})` : ""}`);
 console.log(`migrations:           ${migrations}`);
+console.log(`commands/jurisdiction:${commandCount} / ${jurisdictionCount}`);
 console.log(`apr-3:                ${apr3.status} (approver ${apr3.approver ?? "none"})`);
 console.log(`cf-4:                 ${cf4.status}`);
 console.log(`materials/containers: ${materials} / ${containers}`);
@@ -155,6 +158,8 @@ const pristine =
   cf4.status === "UNKNOWN" &&
   legacyTables.length === 0 &&
   migrations === 8 &&
+  commandCount === 24 &&
+  jurisdictionCount === 24 &&
   materials === 11 &&
   containers === 41 &&
   pending === 3 &&
