@@ -2,9 +2,9 @@ name: H-LIFT CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, dev, production]
   pull_request:
-    branches: [main, master]
+    branches: [main, dev, production]
 
 jobs:
   verify:
