@@ -65,7 +65,8 @@ export function verifyAssertion(token: string | null | undefined): string | null
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
   const now = Math.floor(Date.now() / 1000);
-  if (typeof payload.exp === "number" && payload.exp <= now) return null;
+  // exp is mandatory: an assertion without it must never be accepted.
+  if (typeof payload.exp !== "number" || payload.exp <= now) return null;
   if (typeof payload.nbf === "number" && payload.nbf > now) return null;
 
   const issuer = process.env.HLIFT_IDP_ISSUER?.trim();
