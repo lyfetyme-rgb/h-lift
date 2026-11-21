@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { postJson } from "@/lib/client-api";
 
 export interface Candidate {
   id: string;
@@ -19,25 +20,6 @@ export interface Destination {
   code: string;
   name: string;
   level: string;
-}
-
-async function post(url: string, body: unknown) {
-  const match = document.cookie.match(/(?:^|; )hlift_subject=([^;]*)/);
-  const subject = match ? decodeURIComponent(match[1]) : "";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(subject ? { "x-hlift-subject": subject } : {}),
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const reason = data.decision?.reason_code ? ` (${data.decision.reason_code})` : "";
-    throw new Error((data.detail ?? data.error ?? `HTTP ${res.status}`) + reason);
-  }
-  return data;
 }
 
 export function TransferPackout({
@@ -68,7 +50,7 @@ export function TransferPackout({
     setError(null);
     setOk(null);
     try {
-      const result = await post("/api/hazmat/transfers", {
+      const result = await postJson<{ transfer_group?: string; transfers?: unknown[] }>("/api/hazmat/transfers", {
         action: "TRANSFER",
         container_ids: selected,
         destination_command_id: destination,
@@ -175,7 +157,7 @@ export function UnusedReturn({
     setError(null);
     setOk(null);
     try {
-      await post("/api/hazmat/transfers", {
+      await postJson("/api/hazmat/transfers", {
         action: "UNUSED_RETURN",
         transfer_id: transferId,
         returned_unused_quantity: qty,

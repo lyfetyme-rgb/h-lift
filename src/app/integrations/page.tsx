@@ -1,22 +1,11 @@
-import { Badge, Kpi, Page, Panel } from "@/components/ui";
+import { Kpi, Page, Panel } from "@/components/ui";
 import { IntegrationSync } from "@/components/Actions";
 import { authorize } from "@/lib/authz";
 import { currentPrincipal } from "@/lib/identity";
-// fetch is global in Node 22+
+import { jiraConfig } from "@/lib/integrations/jira";
+import { bitbucketConfig } from "@/lib/integrations/bitbucket";
 
 export const dynamic = "force-dynamic";
-
-async function getStatus() {
-  // Call our own status endpoint server-side.
-  const base = process.env.HLIFT_BASE_URL ?? "http://127.0.0.1:3000";
-  try {
-    const res = await fetch(`${base}/api/integrations/status`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
 
 export default async function IntegrationsPage() {
   const principal = await currentPrincipal();
@@ -34,7 +23,23 @@ export default async function IntegrationsPage() {
     );
   }
 
-  const status = await getStatus();
+  // Read configuration directly on the server. Calling our own HTTP endpoint
+  // would depend on HLIFT_BASE_URL and, under Zero Trust, require an assertion
+  // on a request we cannot supply from a Server Component.
+  const jira = jiraConfig();
+  const bitbucket = bitbucketConfig();
+  const status = {
+    jira: {
+      configured: !!jira,
+      project: jira?.projectKey ?? null,
+      baseUrl: jira?.baseUrl ?? null,
+    },
+    bitbucket: {
+      configured: !!bitbucket,
+      workspace: bitbucket?.workspace ?? null,
+      repo: bitbucket?.repoSlug ?? null,
+    },
+  };
 
   return (
     <Page
