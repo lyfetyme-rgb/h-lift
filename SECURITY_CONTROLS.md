@@ -40,7 +40,7 @@ shortcut that must be replaced before production).
 | RFC 6797 / W3C | Transport + document security | HSTS preload, CSP, `X-Content-Type-Options`, `frame-ancestors 'none'`, `Referrer-Policy`, `Permissions-Policy` in `next.config.mjs` | Implemented |
 | W3C WebAppSec | Content Security Policy | CSP with `object-src 'none'`, `base-uri 'self'`, `form-action 'self'` | Implemented |
 | FedRAMP AC/AU/SC | Baselines | Same controls as NIST 800-53 Rev. 5 above; FedRAMP is a profile of them | Implemented |
-| FedRAMP / STIG | Container hardening | Multi-stage image, non-root `hlift` user, healthcheck, no secrets in the image | Implemented |
+| FedRAMP / STIG | Container hardening | Multi-stage image, patched Alpine packages in every stage, npm/corepack removed from runtime, non-root `hlift` user, healthcheck, no secrets in the image | Implemented |
 | ISO/IEC 27001 A.9 / A.12 | Access & operations | Authz engine, audit bus, configuration drift, change-gated CI | Implemented |
 | ISO/IEC 27001 A.16 | Incident management | Security plane + incident register + POA&M in the assurance plane | Implemented |
 | STIX 2.1 | Threat information | `src/lib/stix.ts` projects security events to indicators and vulnerabilities to STIX vulnerability objects; `GET /api/security/stix` | Implemented |
@@ -106,4 +106,11 @@ SIEM forwarding can be pointed at any collector:
 
 ```bash
 SIEM_WEBHOOK_URL=https://siem.example.mil/hlift SIEM_WEBHOOK_SECRET=... npm run dev
+```
+
+Container image verification:
+
+```bash
+docker build -t h-lift:local .
+docker scout cves local://h-lift:local --only-severity critical,high --exit-code 1
 ```
