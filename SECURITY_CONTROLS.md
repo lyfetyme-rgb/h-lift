@@ -22,12 +22,13 @@ shortcut that must be replaced before production).
 | NIST 800-53 AU-12 | Audit generation | Every PERMIT/DENY, mutation, integration sync and webhook appends an event | Implemented |
 | NIST 800-53 IA-9 / SC-8 | Service authentication | Webhook shared secrets are constant-time compared and required when `HLIFT_ZERO_TRUST=1`; unauthenticated writes fail closed | Implemented |
 | NIST 800-53 CM-6 | Configuration settings | Baseline configuration checks + drift records (`configuration_checks`), reported as drift, never silently healthy | Implemented |
-| NIST 800-53 IA-2 | Identification & authentication | Identity adapter maps an asserted subject to a principal; **assertion is not yet signature-verified** | Partial |
+| NIST 800-53 IA-2 | Identification & authentication | `verifyAssertion()` validates HS256 JWT signature, issuer, audience and expiry; `sub` becomes the principal; demo fallback is disabled in signed mode | Implemented |
 | NIST 800-53 IA-5 | Authenticator management | H-LIFT stores no credentials, tokens or keys (see `SECURITY.md`) | Implemented |
 | NIST 800-53 IR-4 / IR-5 | Incident handling | `security_incidents`, `incident_actions`, capability-gated status changes, linked events | Implemented |
 | NIST 800-53 RA-5 | Vulnerability scanning | `vulnerabilities` register with CVSS as decimal text; exported as STIX | Implemented |
 | NIST 800-53 SC-8 / SC-23 | Transmission confidentiality/integrity | TLS 1.3 only at the edge; HSTS preload; no downgrade | Deployment + Implemented |
-| NIST 800-53 SC-13 | Cryptographic protection | SHA-256 audit chain; TLS 1.3 AES-256/ChaCha20/AES-128 suites; constant-time webhook secret comparison | Implemented |
+| NIST 800-53 SC-13 | Cryptographic protection | SHA-256 audit chain; TLS 1.3 AES-256/ChaCha20/AES-128 suites; constant-time webhook and assertion signature comparison | Implemented |
+| NIST 800-53 CP-9 / SC-8 | Backup protection | `npm run backup:encrypted` / `restore:encrypted` use scrypt + AES-256-GCM with a passphrase that is never stored | Implemented |
 | NIST 800-53 SI-2 | Flaw remediation | CI runs typecheck, build, seed verification, Docker build, gitleaks and blocking `npm audit --audit-level=high` | Implemented |
 | NIST 800-53 SI-4 | System monitoring | SOC console, ingest-source health (`STALE` never healthy), configuration and integrity observations | Implemented |
 | NIST 800-207 4.1 | Identity as the perimeter | `x-hlift-subject` / `hlift_subject` assertion on every request; `src/proxy.ts` rejects unasserted `/api` calls when `HLIFT_ZERO_TRUST=1` | Implemented |
@@ -50,8 +51,11 @@ shortcut that must be replaced before production).
 
 1. **No implicit trust zone.** Every `/api` request is gated when
    `HLIFT_ZERO_TRUST=1`; there is no network-based trust.
-2. **Identity is asserted per request**, not per session. The assertion is
-   `x-hlift-subject` (automation) or `hlift_subject` (console).
+2. **Identity is asserted per request**, not per session. In lab mode the
+   assertion is `x-hlift-subject` / `hlift_subject`; with
+   `HLIFT_IDP_HMAC_SECRET` configured it is a verified HS256 JWT in
+   `x-hlift-assertion` / `hlift_assertion`, and no demo principal fallback is
+   applied.
 3. **Least privilege per transaction.** The policy engine resolves capability,
    assurance, command, facility, lifecycle and expiry on every decision.
 4. **Micro-segmentation.** Facility and command hierarchy scoping are policy
@@ -64,12 +68,14 @@ shortcut that must be replaced before production).
 
 ## Known gaps (must close before production)
 
-- **IA-2 / assertion verification.** The pilot trusts the subject header/cookie.
-  A production deployment must verify a signed assertion from the identity
-  service and remove the `cust.k.rivera` fallback in `resolvePrincipal()`.
+- **Asymmetric IdP assertions.** H-LIFT verifies HS256 shared-secret JWTs. If
+  your IdP issues RS256/JWKS assertions, plug its verifier into
+  `verifyAssertion()`; until then the shared secret must be protected as a key.
 - **TLS termination.** TLS 1.3 is enforced by the edge proxy manifest; a bare
-  `npm start` deployment has no TLS.
-- **Encryption at rest** for `data/hlift.db` is a deployment responsibility.
+  `npm start` deployment has no TLS. This needs a host, DNS name and certificate.
+- **Filesystem encryption at rest.** Backups are encrypted by the scripts above;
+  encrypting the live `data/` volume (LUKS, BitLocker, cloud KMS) remains a host
+  responsibility.
 - **TAXII authentication** relies on the deployment (mTLS or a proxy-injected
   `x-hlift-subject`); `HLIFT_TAXII_OPEN=1` must never be set in production.
 
@@ -82,6 +88,18 @@ curl -s -H 'x-hlift-subject: cyber.s.lee' http://localhost:3000/taxii2/
 curl -s -H 'x-hlift-subject: cyber.s.lee' http://localhost:3000/taxii2/collections/
 # Zero Trust: with HLIFT_ZERO_TRUST=1, this must return 401
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/api/overview
+```
+
+Signed assertions and encrypted backups:
+
+```bash
+# Server started with HLIFT_IDP_HMAC_SECRET=<secret>
+curl -s -H 'x-hlift-assertion: <signed-jwt>' http://localhost:3000/api/identity
+# A plain x-hlift-subject header is ignored in this mode.
+
+HLIFT_BACKUP_PASSPHRASE=<long-random-passphrase> npm run backup:encrypted
+HLIFT_BACKUP_PASSPHRASE=<long-random-passphrase> npm run restore:encrypted -- backups/<file>.db.enc
+npm run db:verify                   # always verify the chain after a restore
 ```
 
 SIEM forwarding can be pointed at any collector:

@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { all, one } from "./db";
 
 /**
@@ -13,6 +14,70 @@ import { all, one } from "./db";
 export const DEFAULT_SUBJECT = "cust.k.rivera";
 export const SUBJECT_HEADER = "x-hlift-subject";
 export const SUBJECT_COOKIE = "hlift_subject";
+export const ASSERTION_HEADER = "x-hlift-assertion";
+export const ASSERTION_COOKIE = "hlift_assertion";
+
+/**
+ * Signed assertion mode. When HLIFT_IDP_HMAC_SECRET is configured, the subject
+ * is taken only from a verified HS256 JWT, never from a plain header/cookie.
+ * Production deployments should replace this shared-secret verifier with their
+ * IdP's asymmetric (JWKS/RS256) assertion validation.
+ */
+export function signedAssertionsRequired(): boolean {
+  return Boolean(process.env.HLIFT_IDP_HMAC_SECRET?.trim());
+}
+
+function base64UrlDecode(value: string): Buffer | null {
+  try {
+    return Buffer.from(value, "base64url");
+  } catch {
+    return null;
+  }
+}
+
+/** Verify a compact HS256 JWT and return its `sub` claim, or null. */
+export function verifyAssertion(token: string | null | undefined): string | null {
+  const secret = process.env.HLIFT_IDP_HMAC_SECRET?.trim();
+  if (!secret || !token) return null;
+
+  const parts = token.trim().split(".");
+  if (parts.length !== 3) return null;
+  const [encodedHeader, encodedPayload, signature] = parts;
+  const headerBytes = base64UrlDecode(encodedHeader);
+  const payloadBytes = base64UrlDecode(encodedPayload);
+  if (!headerBytes || !payloadBytes) return null;
+
+  let header: { alg?: string; typ?: string };
+  let payload: Record<string, unknown>;
+  try {
+    header = JSON.parse(headerBytes.toString("utf8"));
+    payload = JSON.parse(payloadBytes.toString("utf8"));
+  } catch {
+    return null;
+  }
+  if (header.alg !== "HS256") return null;
+
+  const expected = createHmac("sha256", secret)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest("base64url");
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof payload.exp === "number" && payload.exp <= now) return null;
+  if (typeof payload.nbf === "number" && payload.nbf > now) return null;
+
+  const issuer = process.env.HLIFT_IDP_ISSUER?.trim();
+  if (issuer && payload.iss !== issuer) return null;
+  const audience = process.env.HLIFT_IDP_AUDIENCE?.trim();
+  if (audience) {
+    const aud = payload.aud;
+    if (aud !== audience && !(Array.isArray(aud) && aud.includes(audience))) return null;
+  }
+
+  return typeof payload.sub === "string" && payload.sub.trim() ? payload.sub.trim() : null;
+}
 
 export interface RoleRef {
   code: string;
@@ -66,6 +131,12 @@ export function cookieValue(cookieHeader: string | null, name: string): string |
 }
 
 export function principalSubjectFromRequest(request: Request): string | null {
+  if (signedAssertionsRequired()) {
+    const assertion =
+      request.headers.get(ASSERTION_HEADER)?.trim() ||
+      cookieValue(request.headers.get("cookie"), ASSERTION_COOKIE);
+    return verifyAssertion(assertion);
+  }
   const header = request.headers.get(SUBJECT_HEADER);
   if (header?.trim()) return header.trim();
   return cookieValue(request.headers.get("cookie"), SUBJECT_COOKIE);
@@ -120,6 +191,11 @@ export function resolvePrincipal(subjectId?: string | null): Principal | null {
 }
 
 export function principalFromRequest(request: Request): Principal | null {
+  if (signedAssertionsRequired()) {
+    const subject = principalSubjectFromRequest(request);
+    // No demo fallback in signed mode: an unverified caller is never a principal.
+    return subject ? getPrincipal(subject) : null;
+  }
   return resolvePrincipal(principalSubjectFromRequest(request));
 }
 
@@ -132,6 +208,11 @@ export async function currentPrincipal(): Promise<Principal | null> {
   const { headers, cookies } = await import("next/headers");
   const h = await headers();
   const c = await cookies();
+  if (signedAssertionsRequired()) {
+    const assertion = h.get(ASSERTION_HEADER)?.trim() || c.get(ASSERTION_COOKIE)?.value?.trim() || null;
+    const subject = verifyAssertion(assertion);
+    return subject ? getPrincipal(subject) : null;
+  }
   const subject = h.get(SUBJECT_HEADER)?.trim() || c.get(SUBJECT_COOKIE)?.value?.trim() || null;
   return resolvePrincipal(subject);
 }

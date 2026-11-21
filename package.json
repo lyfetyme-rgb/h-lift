@@ -11,7 +11,9 @@
     "db:verify": "node scripts/verify-seed.mjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run db:verify",
-    "reset:dev": "node scripts/reset-dev.mjs"
+    "reset:dev": "node scripts/reset-dev.mjs",
+    "backup:encrypted": "node scripts/backup-encrypted.mjs",
+    "restore:encrypted": "node scripts/restore-encrypted.mjs"
   },
   "dependencies": {
     "next": "latest",

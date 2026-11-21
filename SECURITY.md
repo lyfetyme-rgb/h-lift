@@ -13,6 +13,11 @@ H-LIFT never stores or handles credentials. Identity is asserted by the DoD iden
 - Back up and protect the SQLite volume (`hlift-data`); it contains operational records and the hash-chained audit bus.
 - Verify the audit chain after any restore: `npm run db:verify` (or `/audit` in the console).
 - Enable Zero Trust (`HLIFT_ZERO_TRUST=1`) so unasserted `/api` requests are rejected.
+- Configure signed assertions (`HLIFT_IDP_HMAC_SECRET`, plus issuer/audience) so
+  identity comes from a verified JWT rather than a plain header. The demo
+  fallback is disabled in this mode.
+- Encrypt backups with `npm run backup:encrypted` and a passphrase held in your
+  secrets manager; verify the audit chain after every restore.
 - Forward the audit bus to your SIEM with `SIEM_WEBHOOK_URL` / `SIEM_WEBHOOK_SECRET`, and/or consume the STIX export (`/api/security/stix`) and TAXII feed (`/taxii2/`).
 - See `SECURITY_CONTROLS.md` for the full mapping to NIST 800-53 Rev. 5, NIST 800-207, RFC 8446, W3C web security, FedRAMP/ISO 27001 and STIX/TAXII/SIEM.
 
