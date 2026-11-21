@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { all, one, run } from "./db";
+import { forwardAuditEvent } from "./siem";
 
 /**
  * The shared append-only event / audit bus.
@@ -153,6 +154,8 @@ export function appendAuditEvent(input: AuditInput): AuditRecord {
   );
   const row = one<AuditRecord>("SELECT * FROM audit_events WHERE id = ?", record.id);
   if (!row) throw new Error("Audit event was not persisted.");
+  // Opt-in SIEM forwarding; best-effort, never blocks the local write.
+  forwardAuditEvent(row);
   return row;
 }
 

@@ -1,13 +1,19 @@
 # syntax=docker/dockerfile:1
 
+# Keep every stage on the same Node line; Alpine fixes are applied explicitly
+# so a cached base layer does not ship known OS CVEs.
+ARG NODE_IMAGE=node:22-alpine
+
 # ---- deps ----
-FROM node:22-alpine AS deps
+FROM ${NODE_IMAGE} AS deps
+RUN apk upgrade --no-cache
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 # ---- builder ----
-FROM node:22-alpine AS builder
+FROM ${NODE_IMAGE} AS builder
+RUN apk upgrade --no-cache
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -16,7 +22,15 @@ COPY . .
 RUN npm run build
 
 # ---- runner ----
-FROM node:22-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
+# Patch OS packages, then remove the npm/corepack toolchain from the runtime.
+# The standalone server needs only node and the traced node_modules shipped below.
+RUN apk upgrade --no-cache \
+ && rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx \
+           /usr/local/bin/corepack
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \

@@ -36,3 +36,7 @@ docker-compose.override.yml
 # Never commit exported evidence or audit dumps that may contain PHI/PII
 *.dump
 *.bak
+
+# Encrypted backups (still operational data, even when encrypted)
+backups/
+*.enc
