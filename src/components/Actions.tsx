@@ -3,25 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CHECKLIST_FIELDS } from "@/lib/lifecycle";
-
-async function post(url: string, body: unknown) {
-  const match = document.cookie.match(/(?:^|; )hlift_subject=([^;]*)/);
-  const subject = match ? decodeURIComponent(match[1]) : "";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(subject ? { "x-hlift-subject": subject } : {}),
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const reason = data.decision?.reason_code ? ` (${data.decision.reason_code})` : "";
-    throw new Error((data.detail ?? data.error ?? `HTTP ${res.status}`) + reason);
-  }
-  return data;
-}
+import { postJson } from "@/lib/client-api";
 
 function useAction() {
   const router = useRouter();
@@ -56,7 +38,7 @@ export function ApprovalDecision({ id }: { id: string }) {
 
   const decide = (action: "approve" | "reject") =>
     run(
-      () => post(`/api/approvals/${id}/decision`, { action, approver, note }),
+      () => postJson(`/api/approvals/${id}/decision`, { action, approver, note }),
       action === "approve" ? "Approved." : "Rejected."
     );
 
@@ -96,7 +78,7 @@ export function HitlDecision({ id }: { id: string }) {
 
   const decide = (action: "approve" | "reject") =>
     run(
-      () => post(`/api/hitl/${id}/decision`, { action, decided_by: by, note }),
+      () => postJson(`/api/hitl/${id}/decision`, { action, decided_by: by, note }),
       action === "approve" ? "Exception approved." : "Exception rejected."
     );
 
@@ -141,7 +123,7 @@ export function ConflictResolve({ id }: { id: string }) {
         <button
           className="small"
           disabled={busy || !resolution.trim()}
-          onClick={() => run(() => post(`/api/conflicts/${id}/resolve`, { resolution }), "Conflict resolved.")}
+          onClick={() => run(() => postJson(`/api/conflicts/${id}/resolve`, { resolution }), "Conflict resolved.")}
         >
           Resolve
         </button>
@@ -180,7 +162,7 @@ export function ReturnForm({ containers }: { containers: ReturnOption[] }) {
   const submit = async () => {
     const success = await run(
       () =>
-        post("/api/hazmat/returns", {
+        postJson("/api/hazmat/returns", {
           container_id: containerId,
           returned_quantity: quantity,
           measurement_method: method,
@@ -311,7 +293,7 @@ export function InspectionDecision({ inspection }: { inspection: InspectionView 
     }
     return run(
       () =>
-        post(`/api/hazmat/inspections/${inspection.id}/decision`, {
+        postJson(`/api/hazmat/inspections/${inspection.id}/decision`, {
           inspector,
           outcome,
           checks: payload,
@@ -428,7 +410,7 @@ export function ContainerTransition({
 
   const go = (to: string) =>
     run(
-      () => post(`/api/hazmat/containers/${id}/transition`, { to, actor, notes: notes || undefined }),
+      () => postJson(`/api/hazmat/containers/${id}/transition`, { to, actor, notes: notes || undefined }),
       `Transition to ${to} recorded.`
     );
 
@@ -487,7 +469,7 @@ export function IncidentStatus({
         <button
           className="small"
           disabled={busy || !actor.trim() || status === current}
-          onClick={() => run(() => post(`/api/security/incidents/${id}`, { status, actor, note }), `Incident set to ${status}.`)}
+          onClick={() => run(() => postJson(`/api/security/incidents/${id}`, { status, actor, note }), `Incident set to ${status}.`)}
         >
           Update incident
         </button>
@@ -537,7 +519,7 @@ export function FindingStatus({
         <button
           className="small"
           disabled={busy || !actor.trim() || status === current || options.length === 0}
-          onClick={() => run(() => post(`/api/assurance/findings/${id}`, { status, actor, note }), `Finding set to ${status}.`)}
+          onClick={() => run(() => postJson(`/api/assurance/findings/${id}`, { status, actor, note }), `Finding set to ${status}.`)}
         >
           Update finding
         </button>
@@ -570,7 +552,7 @@ export function IntegrationSync({ kind, label }: { kind: "jira" | "bitbucket"; l
 
   const sync = () =>
     run(async () => {
-      const data = (await post(`/api/integrations/${kind}/sync`, {})) as {
+      const data = (await postJson(`/api/integrations/${kind}/sync`, {})) as {
         fetched?: number;
         upserted?: number;
         linked?: number;
@@ -587,6 +569,23 @@ export function IntegrationSync({ kind, label }: { kind: "jira" | "bitbucket"; l
         {busy ? "Syncing…" : label}
       </button>
       {result ? <div className="okmsg">{result}</div> : null}
+      {error ? <div className="error">{error}</div> : null}
+      {ok ? <div className="okmsg">{ok}</div> : null}
+    </div>
+  );
+}
+
+export function RecomputeButton() {
+  const { busy, error, ok, run } = useAction();
+  return (
+    <div>
+      <button
+        className="small primary"
+        disabled={busy}
+        onClick={() => run(() => postJson("/api/improvement", {}), "Effectiveness recomputed.")}
+      >
+        {busy ? "Recomputing…" : "Recompute effectiveness"}
+      </button>
       {error ? <div className="error">{error}</div> : null}
       {ok ? <div className="okmsg">{ok}</div> : null}
     </div>

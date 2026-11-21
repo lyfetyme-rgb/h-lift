@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AccessDenied from "@/components/AccessDenied";
 import RecommendationDecision from "@/components/RecommendationDecision";
+import { RecomputeButton } from "@/components/Actions";
 import { Badge, Kpi, Page, Panel, UnknownNotice } from "@/components/ui";
 import { authorize, canRead } from "@/lib/authz";
 import { currentPrincipal } from "@/lib/identity";
@@ -52,11 +53,7 @@ export default async function ImprovementPage() {
       </div>
 
       <div className="actions-row" style={{ marginBottom: 16 }}>
-        {canDecide ? (
-          <form action="/api/improvement" method="POST">
-            <button className="small primary" type="submit">Recompute effectiveness</button>
-          </form>
-        ) : null}
+        {canDecide ? <RecomputeButton /> : null}
         <Link className="small" href="/audit">audit bus →</Link>
       </div>
 
