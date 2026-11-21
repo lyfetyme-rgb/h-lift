@@ -31,7 +31,7 @@ shortcut that must be replaced before production).
 | NIST 800-53 CP-9 / SC-8 | Backup protection | `npm run backup:encrypted` / `restore:encrypted` use scrypt + AES-256-GCM with a passphrase that is never stored | Implemented |
 | NIST 800-53 SI-2 | Flaw remediation | CI runs typecheck, build, seed verification, Docker build, gitleaks and blocking `npm audit --audit-level=high` | Implemented |
 | NIST 800-53 SI-4 | System monitoring | SOC console, ingest-source health (`STALE` never healthy), configuration and integrity observations | Implemented |
-| NIST 800-207 4.1 | Identity as the perimeter | `x-hlift-subject` / `hlift_subject` assertion on every request; `src/proxy.ts` rejects unasserted `/api` calls when `HLIFT_ZERO_TRUST=1` | Implemented |
+| NIST 800-207 4.1 | Identity as the perimeter | `x-hlift-subject` / `hlift_subject` assertion on every request; `src/proxy.ts` verifies HS256 signature, expiry, issuer and audience at the edge and rejects missing/invalid assertions when `HLIFT_ZERO_TRUST=1` | Implemented |
 | NIST 800-207 4.2 | Least privilege, per-transaction | `authorize()` evaluated per request; decisions persisted; segregation of duties | Implemented |
 | NIST 800-207 4.3 | Micro-segmentation | Facility scope (`FACILITY_SCOPE_MISMATCH`) and command hierarchy (`DESCENDANTS`) enforced in policy | Implemented |
 | NIST 800-207 4.4 | Continuous monitoring/verification | Decision ledger + hash-chained audit bus; deny decisions are recorded, not swallowed | Implemented |
@@ -55,7 +55,9 @@ shortcut that must be replaced before production).
    assertion is `x-hlift-subject` / `hlift_subject`; with
    `HLIFT_IDP_HMAC_SECRET` configured it is a verified HS256 JWT in
    `x-hlift-assertion` / `hlift_assertion`, and no demo principal fallback is
-   applied.
+   applied. `exp` is mandatory, and the signature is checked both at the edge
+   (`src/proxy.ts`, Web Crypto) and again before principal resolution
+   (`verifyAssertion()`).
 3. **Least privilege per transaction.** The policy engine resolves capability,
    assurance, command, facility, lifecycle and expiry on every decision.
 4. **Micro-segmentation.** Facility and command hierarchy scoping are policy
