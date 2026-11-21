@@ -1,6 +1,7 @@
 import { fail, ok, readJson } from "@/lib/http";
 import { all, one, run } from "@/lib/db";
 import { appendAuditEvent } from "@/lib/audit";
+import { webhookAuthError } from "@/lib/webhook-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -9,11 +10,9 @@ const PR_STATE_MAP: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
-  const secret = process.env.BITBUCKET_WEBHOOK_SECRET?.trim();
-  if (secret) {
-    const provided = request.headers.get("x-hlift-webhook-secret");
-    if (provided !== secret) return fail("Invalid webhook secret.", 401);
-  }
+  // Fail-closed under Zero Trust; optional only in lab mode.
+  const authError = webhookAuthError(request, "BITBUCKET_WEBHOOK_SECRET");
+  if (authError) return fail(authError, 401);
 
   try {
     const body = (await readJson(request)) as any;

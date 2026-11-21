@@ -76,4 +76,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: npm audit
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=high

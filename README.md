@@ -329,8 +329,14 @@ All endpoints return JSON. Mutations validate server-side; decisions require a n
 | GET, POST | `/api/integrations/jira/sync` | Config status / capability-gated sync of Jira issues into `engineering_issues`; appends `INTEGRATION_SYNC` to the audit bus |
 | GET, POST | `/api/integrations/bitbucket/sync` | Config status / capability-gated sync of PRs into `code_links` (issue key matched in the source branch name); appends `INTEGRATION_SYNC` |
 | GET | `/api/integrations/status` | Jira and Bitbucket configuration status (env-driven) |
-| POST | `/api/webhooks/jira` | Single-issue webhook; optional `JIRA_WEBHOOK_SECRET` via `x-hlift-webhook-secret`; appends `INTEGRATION_EVENT_INGESTED` |
-| POST | `/api/webhooks/bitbucket` | PR webhook; optional `BITBUCKET_WEBHOOK_SECRET`; appends `INTEGRATION_EVENT_INGESTED` (outcome `UNLINKED` when no issue key matches the branch) |
+| POST | `/api/webhooks/jira` | Single-issue webhook; `JIRA_WEBHOOK_SECRET` via `x-hlift-webhook-secret` (fail-closed under `HLIFT_ZERO_TRUST=1`); appends `INTEGRATION_EVENT_INGESTED` |
+| POST | `/api/webhooks/bitbucket` | PR webhook; `BITBUCKET_WEBHOOK_SECRET` (fail-closed under `HLIFT_ZERO_TRUST=1`); appends `INTEGRATION_EVENT_INGESTED` (outcome `UNLINKED` when no issue key matches the branch) |
+| GET | `/api/security/stix` | STIX 2.1 bundle: security events as indicators, vulnerabilities as STIX vulnerability objects; requires `security.events.read` |
+| GET | `/taxii2/` | TAXII 2.1 discovery document |
+| GET | `/taxii2/collections/` | TAXII 2.1 collections |
+| GET | `/taxii2/collections/[id]` | TAXII 2.1 collection metadata with object counts |
+| GET | `/taxii2/collections/[id]/objects` | TAXII 2.1 STIX objects (`?limit=`) |
+| GET | `/taxii2/collections/[id]/manifest` | TAXII 2.1 manifest |
 
 ### Mutation rules
 
