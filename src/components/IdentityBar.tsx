@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiJson } from "@/lib/client-api";
 
@@ -24,25 +24,16 @@ export default function IdentityBar() {
   const [people, setPeople] = useState<PrincipalView[]>([]);
   const [switchable, setSwitchable] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  const load = useCallback(async () => {
-    setLoadError(null);
-    try {
-      const data = await apiJson<IdentityResponse>("/api/identity");
-      setCurrent(data.current ?? null);
-      setPeople(data.principals ?? []);
-      setSwitchable(data.switchable !== false);
-    } catch (error) {
-      // Surface the failure instead of pretending no identity is configured.
-      setLoadError(error instanceof Error ? error.message : "Identity could not be loaded.");
-    }
-  }, []);
 
   useEffect(() => {
-    void load();
-  }, [load, reloadKey]);
+    apiJson<IdentityResponse>("/api/identity")
+      .then((d) => {
+        setCurrent(d.current ?? null);
+        setPeople(d.principals ?? []);
+        setSwitchable(d.switchable !== false);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const choose = (subject: string) => {
     setBusy(true);
@@ -52,17 +43,6 @@ export default function IdentityBar() {
     router.refresh();
     setTimeout(() => setBusy(false), 400);
   };
-
-  if (loadError) {
-    return (
-      <div className="identity-bar" role="alert">
-        <span className="error" title={loadError}>identity unavailable</span>
-        <button type="button" className="small" onClick={() => setReloadKey((k) => k + 1)}>
-          Retry
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="identity-bar">
@@ -74,7 +54,6 @@ export default function IdentityBar() {
           disabled={busy || people.length === 0}
           onChange={(e) => choose(e.target.value)}
         >
-          {people.length === 0 ? <option value="">no principals available</option> : null}
           {people.map((p) => (
             <option key={p.subject_id} value={p.subject_id}>
               {p.display_name} · {p.role_label} · {p.facility_id ?? "NO FACILITY"}

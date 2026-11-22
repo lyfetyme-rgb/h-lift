@@ -125,14 +125,7 @@ export function cookieValue(cookieHeader: string | null, name: string): string |
     const idx = part.indexOf("=");
     if (idx === -1) continue;
     if (part.slice(0, idx).trim() === name) {
-      const raw = part.slice(idx + 1).trim();
-      try {
-        return decodeURIComponent(raw);
-      } catch {
-        // A malformed escape such as "%" must not turn identity resolution
-        // into a 500 — treat it as an absent cookie and fail closed.
-        return null;
-      }
+      return decodeURIComponent(part.slice(idx + 1).trim());
     }
   }
   return null;

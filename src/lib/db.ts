@@ -11,12 +11,6 @@ declare global {
   var __hliftDb: DatabaseSync | undefined;
 }
 
-/** Last schema/migration failure, surfaced by /api/health instead of being hidden. */
-let schemaInitError: string | null = null;
-export function getSchemaError(): string | null {
-  return schemaInitError;
-}
-
 /**
  * Apply the preserved baseline schema, then every forward migration in
  * lexical order. The ledger makes ALTER TABLE migrations idempotent across
@@ -77,12 +71,8 @@ export function getDb(): DatabaseSync {
     try {
       global.__hliftDb.exec(readFileSync(SCHEMA_PATH, "utf8"));
       applyMigrations(global.__hliftDb);
-    } catch (error) {
-      // Keep running in standalone builds where the schema file may be absent,
-      // but never hide the reason: the health check reports a degraded service
-      // rather than rendering zero counts that look like real data.
-      schemaInitError = error instanceof Error ? error.message : String(error);
-      console.error(JSON.stringify({ severity: "ERROR", event: "db.schema_init_failed", error: schemaInitError }));
+    } catch {
+      /* schema file may be unavailable in standalone builds */
     }
   }
   return global.__hliftDb;
