@@ -41,8 +41,11 @@ export async function fetchBitbucketPullRequests(
 ): Promise<BitbucketPullRequest[]> {
   const auth = Buffer.from(`${cfg.username}:${cfg.appPassword}`).toString("base64");
   const url = `https://api.bitbucket.org/2.0/repositories/${cfg.workspace}/${cfg.repoSlug}/pullrequests?state=OPEN&state=MERGED&state=DECLINED&pagelen=${pagelen}`;
+  // Bound the provider call so a hung endpoint cannot pin a route handler and
+  // every page that depends on it.
   const res = await fetch(url, {
     headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Bitbucket PR list failed: ${res.status} ${res.statusText}`);
   const data = (await res.json()) as { values?: any[] };
