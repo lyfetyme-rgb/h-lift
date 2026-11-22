@@ -53,11 +53,8 @@ export async function fetchJiraIssues(cfg: JiraConfig, maxResults = 100): Promis
   const auth = Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString("base64");
   const jql = encodeURIComponent(`project = ${cfg.projectKey} ORDER BY updated DESC`);
   const url = `${cfg.baseUrl}/rest/api/3/search/jql?jql=${jql}&maxResults=${maxResults}&fields=summary,status,priority,assignee,created,updated`;
-  // Bound the provider call so a hung endpoint cannot pin a route handler and
-  // every page that depends on it. The route's error handler surfaces the timeout.
   const res = await fetch(url, {
     headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
-    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Jira search failed: ${res.status} ${res.statusText}`);
   const data = (await res.json()) as { issues?: any[] };
